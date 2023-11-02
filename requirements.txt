@@ -1,1 +1,4 @@
 torch
+secml
+torchvision
+git+https://github.com/RobustBench/robustbench.git

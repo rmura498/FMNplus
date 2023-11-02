@@ -8,8 +8,8 @@ from torch import Tensor
 from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from Utils.utils import l0_projection, l1_projection, linf_projection, l2_projection
-from Utils.utils import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
+from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
+from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
 
 
 class FMN:
@@ -41,7 +41,8 @@ class FMN:
                  gamma_final: float = 0.001,
                  starting_points: Optional[Tensor] = None,
                  binary_search_steps: int = 10,
-                 device=torch.device('cpu')
+                 device=torch.device('cpu'),
+                 targeted= False
                  ):
         self.model = model
         self.norm = norm
@@ -53,6 +54,7 @@ class FMN:
         self.starting_points = starting_points
         self.binary_search_steps = binary_search_steps
         self.device = device
+        self.targeted = targeted
 
         self._dual_projection_mid_points = {
             0: (None, l0_projection, l0_mid_points),
@@ -98,8 +100,6 @@ class FMN:
         images = images.clone().detach().to(self.device)
         labels = labels.clone().detach().to(self.device)
 
-        if self.targeted:
-            labels = self.get_target_label(images, labels)
 
         adv_images = images.clone().detach()
 
