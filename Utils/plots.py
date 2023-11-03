@@ -1,78 +1,53 @@
 import torch
+import os
+import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def NormalizeData(data):
     return 2*((data - np.min(data)) / (np.max(data) - np.min(data))) -1
+    #return ((data - np.min(data)) / (np.max(data) - np.min(data)))
 
 
-def plot_distance(distances, epsilons, loss, loss_type):
-    min_dist = distances[-1]
-    #print(distances)
-    epsilons = NormalizeData(epsilons)
-    distances = NormalizeData(distances)
-    loss = NormalizeData(loss)
-    steps = len(epsilons)
-    fig, ax = plt.subplots()
-    ax.plot(epsilons, label='epsilon')
-    ax.plot(distances, label='distances')
-    ax.plot(loss, label='loss')
-    ax.legend(loc=0, prop={'size': 8})
+def plot_distance():
+    filenames = os.listdir('./experiments/')
 
-    dpi = fig.dpi
-    rect_height_inch = ax.bbox.height / dpi
-    fontsize = rect_height_inch * 4
+    fig, axs = plt.subplots(4, 3, figsize=(8,10), layout='constrained')
 
-    ax.set_title(f"Steps: {steps}, loss: {loss_type}, Minimum Distance: {min_dist}", fontsize=fontsize)
+    for ax, filename in zip(axs.flat, filenames):
+        with open('./experiments/' + filename, 'rb') as file:
+            attack_data = pickle.load(file)
 
-    ax.set_xlabel("Steps")
-    ax.set_ylabel("Distance - Loss")
-    ax.grid()
+        distance = attack_data['distance']
+        distance_sample = [distance[0].tolist() for distance in distance]
+        epsilon = attack_data['epsilon']
+        epsilon_sample = [epsilon[0].tolist() for epsilon in epsilon]
+        loss_attack = attack_data['loss']
+        loss_sample = [loss[0].tolist() for loss in loss_attack]
 
-    plt.show()
+        min_dist = "{:.7f}".format(distance_sample[-1])
+        epsilons = NormalizeData(epsilon_sample)
+        distances = NormalizeData(distance_sample)
+        loss = NormalizeData(loss_sample)
+        steps = len(epsilons)
 
-
-def plot_epsilon_robust(exps_distances=[],
-                        exps_names=[],
-                        exps_params=[],
-                        best_distances=[]):
-    if len(exps_distances) == 0:
-        print("Error: Not enough distances per experiment!")
-        return
-
-    # number of experiments
-    n_exps = len(exps_distances)
-    plot_grid_size = n_exps // 2 + 1
-
-    fig = plt.figure(figsize=(3, 3))
-
-    for i, exp_distances in enumerate(exps_distances):
-        # single experiment
-        steps = len(exp_distances)
-        batch_size = len(exp_distances[0])
-
-        distances, robust_per_iter = compute_robust(exp_distances, best_distances[i])
-
-        distances = np.array(distances)
-        distances.sort()
-        robust_per_iter.sort(reverse=True)
-
-        ax = fig.add_subplot(plot_grid_size, plot_grid_size, i + 1)
-        ax.plot(distances,
-                robust_per_iter)
-        ax.plot(8 / 255, 0.661, 'x', label='AA')
-        ax.grid()
+        ax.plot(epsilons, label='epsilon')
+        ax.plot(distances, label='distances')
+        ax.plot(loss, label='loss')
+        ax.legend(loc=0, prop={'size': 4})
 
         dpi = fig.dpi
         rect_height_inch = ax.bbox.height / dpi
         fontsize = rect_height_inch * 4
-        ax.set_title(f"Steps: {steps}, batch: {batch_size}, norm: {exps_params[i]['norm']},"
-                     f"\nOptimizer: {exps_params[i]['optimizer']}, Scheduler: {exps_params[i]['scheduler']}",
-                     fontsize=fontsize)
-        ax.legend(loc=0, prop={'size': 8})
-        ax.set_xlabel(r"$||\boldsymbol{\delta}||_\infty$")
-        ax.set_ylabel("R. Acc.")
 
-    plt.xlim([0, 0.2])
+        title = filename.split('/')
+
+        ax.set_title(f"Steps: {steps}, S: {title[-1]}, MiDist: {min_dist}", fontsize=fontsize)
+
+        ax.set_xlabel("Steps")
+        ax.set_ylabel("Distance - Loss")
+        ax.grid()
+
+    plt.show()
     fig.savefig("example.pdf")

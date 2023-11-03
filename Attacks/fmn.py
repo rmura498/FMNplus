@@ -5,8 +5,8 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.optim import SGD
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
@@ -43,8 +43,10 @@ class FMN:
                  starting_points: Optional[Tensor] = None,
                  binary_search_steps: int = 10,
                  device=torch.device('cpu'),
-                 targeted= False,
-                 loss = 'LL'
+                 targeted=False,
+                 loss='LL',
+                 optimizer='SGD',
+                 scheduler='CALR'
                  ):
         self.model = model
         self.norm = norm
@@ -59,6 +61,16 @@ class FMN:
         self.targeted = targeted
         self.loss = loss
 
+        optimizers = {
+            'SGD': SGD,
+            'Adam': Adam
+        }
+
+        schedulers = {
+            'CALR': CosineAnnealingLR,
+            'RLROP': ReduceLROnPlateau
+        }
+
         self.attack_data = {
             'distance': [],
             'epsilon': [],
@@ -71,6 +83,10 @@ class FMN:
             2: (2, l2_projection, l2_mid_points),
             float('inf'): (1, linf_projection, linf_mid_points),
         }
+
+        self.optimizer = optimizers[optimizer]
+        self.scheduler = schedulers[scheduler]
+        self.scheduler_name = scheduler
 
     def _boundary_search(self, images, labels):
         batch_size = len(images)
@@ -100,7 +116,6 @@ class FMN:
 
         images = images.clone().detach().to(self.device)
         labels = labels.clone().detach().to(self.device)
-
 
         adv_images = images.clone().detach()
 
@@ -134,8 +149,11 @@ class FMN:
         multiplier = 1 if self.targeted else -1
         delta.requires_grad_(True)
 
-        optimizer = SGD([delta], lr=self.alpha_init)
-        scheduler = CosineAnnealingLR(optimizer, T_max=self.steps)
+        optimizer = self.optimizer([delta], lr=self.alpha_init)
+        if self.scheduler_name == 'CALR':
+            scheduler = self.scheduler(optimizer, T_max=self.steps)
+        else:
+            scheduler = self.scheduler(optimizer)
 
         for i in range(self.steps):
             optimizer.zero_grad()
@@ -149,7 +167,6 @@ class FMN:
 
             logits = self.model(adv_images)
             pred_labels = logits.argmax(dim=1)
-
 
             if i == 0:
                 labels_infhot = torch.zeros_like(logits).scatter_(
@@ -166,6 +183,7 @@ class FMN:
             if self.loss == 'LL':
                 logit_diffs = logit_diff_func(logits=logits)
                 loss = -(multiplier * logit_diffs)
+
             elif self.loss == 'CE':
                 c_loss = nn.CrossEntropyLoss(reduction='none')
                 loss = -c_loss(logits, labels)
@@ -176,7 +194,6 @@ class FMN:
             loss.sum().backward()
             #print(loss, loss.shape)
             delta_grad = delta.grad.data
-
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']

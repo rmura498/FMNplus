@@ -1,9 +1,12 @@
 import torch
 import math
+import os
+import pickle
 from Attacks.fmn import FMN
 from Utils.load_model import load_dataset, load_model
 from robustbench.utils import clean_accuracy
 from Utils.plots import plot_distance
+from Utils.fmn_strategies import fmn_strategies
 
 """
 FMN parametric strategy 
@@ -15,67 +18,42 @@ FMN parametric strategy
 
 """
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = load_model('Gowal2021Improving_R18_ddpm_100m', 'cifar10')
-dataset = load_dataset('cifar10')
-model.eval()
-model.to(device)
 
-batch = 10
+def run_experiments(steps=50, batch_size=10, batch_number=1):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = load_model('Gowal2021Improving_R18_ddpm_100m', 'cifar10')
+    dataset = load_dataset('cifar10')
+    model.eval()
+    model.to(device)
 
-dataset_frac = list(range(math.floor(len(dataset) * 0.5) + 1, len(dataset)))
-dataset_frac = torch.utils.data.Subset(dataset, dataset_frac)
-dl_test = torch.utils.data.DataLoader(dataset_frac, batch_size=batch,shuffle=False)
-dl_test_iter = iter(dl_test)
-samples, labels = next(dl_test_iter)
+    fmn_dict = fmn_strategies()
 
-steps=100
+    dataset_frac = list(range(math.floor(len(dataset) * 0.5) + 1, len(dataset)))
+    dataset_frac = torch.utils.data.Subset(dataset, dataset_frac)
+    dl_test = torch.utils.data.DataLoader(dataset_frac, batch_size=batch_size, shuffle=False)
+    dl_test_iter = iter(dl_test)
+    samples, labels = next(dl_test_iter)
 
-attack_LL = FMN(model, steps=steps, loss='LL')
-attack_CE = FMN(model, steps=steps, loss='CE')
-attack_DLR = FMN(model, steps=steps, loss='DLR')
+    for i in range(len(fmn_dict)):
+        print("Running:", fmn_dict[str(i)])
+        attack = FMN(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
+                     scheduler=fmn_dict[str(i)]['scheduler'])
+        adv_x = attack.forward(samples, labels)
+        clean_acc = clean_accuracy(model, samples, labels)
+        print("Clean Accuracy", clean_acc)
+        robust_acc = clean_accuracy(model, adv_x, labels)
+        print(f"Robust Accuracy:{fmn_dict[str(i)]}", robust_acc)
+        attack_data = attack.attack_data
 
-adv_x_LL = attack_LL.forward(samples, labels)
-adv_x_CE = attack_CE.forward(samples, labels)
-adv_x_DLR = attack_DLR.forward(samples, labels)
-
-clean_acc = clean_accuracy(model, samples, labels)
-print("Clean Accuracy", clean_acc)
-robust_acc = clean_accuracy(model, adv_x_LL, labels)
-print("Robust Accuracy LL", robust_acc)
-
-attack_LL_data = attack_LL.attack_data
-distance_LL = attack_LL_data['distance']
-distance_LL_0 = [distance[0].tolist() for distance in distance_LL]
-epsilon_LL = attack_LL_data['epsilon']
-epsilon_LL_0 = [epsilon[0].tolist() for epsilon in epsilon_LL]
-loss_LL = attack_LL_data['loss']
-loss_LL_0 = [loss[0].tolist() for loss in loss_LL]
-
-
-robust_acc = clean_accuracy(model, adv_x_CE, labels)
-print("Robust Accuracy CE", robust_acc)
-attack_CE_data = attack_CE.attack_data
-distance_CE = attack_CE_data['distance']
-distance_CE_0 = [distance[0].tolist() for distance in distance_CE]
-epsilon_CE = attack_CE_data['epsilon']
-epsilon_CE_0 = [epsilon[0].tolist() for epsilon in epsilon_CE]
-loss_CE = attack_CE_data['loss']
-loss_CE_0 = [loss[0].tolist() for loss in loss_CE]
+        directory = './experiments/'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        filename = os.path.join(directory,
+                                f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-{fmn_dict[str(i)]["loss"]}.pkl')
+        # Save the object to a pickle file
+        with open(filename, 'wb') as file:
+            pickle.dump(attack_data, file)
 
 
-robust_acc = clean_accuracy(model, adv_x_DLR, labels)
-print("Robust Accuracy DLR", robust_acc)
-attack_DLR_data = attack_DLR.attack_data
-distance_DLR = attack_DLR_data['distance']
-distance_DLR_0 = [distance[0].tolist() for distance in distance_DLR]
-epsilon_DLR = attack_DLR_data['epsilon']
-epsilon_DLR_0 = [epsilon[0].tolist() for epsilon in epsilon_DLR]
-loss_DLR = attack_DLR_data['loss']
-loss_DLR_0 = [loss[0].tolist() for loss in loss_DLR]
-
-plot_distance(distance_LL_0, epsilon_LL_0, loss_LL_0, 'LL')
-plot_distance(distance_CE_0, epsilon_CE_0, loss_CE_0, 'CE')
-plot_distance(distance_DLR_0, epsilon_DLR_0, loss_DLR_0, 'DLR')
-
-
+#run_experiments()
+plot_distance()
