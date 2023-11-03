@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
+from Utils.loss import difference_of_logits, dlr_loss
 
 
 class FMN:
@@ -42,7 +43,8 @@ class FMN:
                  starting_points: Optional[Tensor] = None,
                  binary_search_steps: int = 10,
                  device=torch.device('cpu'),
-                 targeted= False
+                 targeted= False,
+                 loss = 'LL'
                  ):
         self.model = model
         self.norm = norm
@@ -55,6 +57,13 @@ class FMN:
         self.binary_search_steps = binary_search_steps
         self.device = device
         self.targeted = targeted
+        self.loss = loss
+
+        self.attack_data = {
+            'distance': [],
+            'epsilon': [],
+            'loss': []
+        }
 
         self._dual_projection_mid_points = {
             0: (None, l0_projection, l0_mid_points),
@@ -62,14 +71,6 @@ class FMN:
             2: (2, l2_projection, l2_mid_points),
             float('inf'): (1, linf_projection, linf_mid_points),
         }
-
-    def _difference_of_logits(self, logits, labels, labels_infhot):
-        if labels_infhot is None:
-            labels_infhot = torch.zeros_like(logits).scatter_(1, labels.unsqueeze(1), float('inf'))
-
-        class_logits = logits.gather(1, labels.unsqueeze(1)).squeeze(1)
-        other_logits = (logits - labels_infhot).amax(dim=1)
-        return class_logits - other_logits
 
     def _boundary_search(self, images, labels):
         batch_size = len(images)
@@ -149,6 +150,7 @@ class FMN:
             logits = self.model(adv_images)
             pred_labels = logits.argmax(dim=1)
 
+
             if i == 0:
                 labels_infhot = torch.zeros_like(logits).scatter_(
                     1,
@@ -156,17 +158,25 @@ class FMN:
                     float('inf')
                 )
                 logit_diff_func = partial(
-                    self._difference_of_logits,
+                    difference_of_logits,
                     labels=labels,
                     labels_infhot=labels_infhot
                 )
 
-            logit_diffs = logit_diff_func(logits=logits)
-            loss = -(multiplier * logit_diffs)
+            if self.loss == 'LL':
+                logit_diffs = logit_diff_func(logits=logits)
+                loss = -(multiplier * logit_diffs)
+            elif self.loss == 'CE':
+                c_loss = nn.CrossEntropyLoss(reduction='none')
+                loss = -c_loss(logits, labels)
+
+            elif self.loss == 'DLR':
+                loss = -dlr_loss(logits, labels)
 
             loss.sum().backward()
-
+            #print(loss, loss.shape)
             delta_grad = delta.grad.data
+
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']
@@ -207,5 +217,12 @@ class FMN:
             delta.data.add_(images).clamp_(min=0, max=1).sub_(images)
 
             scheduler.step()
+
+            _epsilon = epsilon.clone()
+            _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
+
+            self.attack_data['loss'].append(loss)
+            self.attack_data['distance'].append(_distance)
+            self.attack_data['epsilon'].append(_epsilon)
 
         return init_trackers['best_adv']
