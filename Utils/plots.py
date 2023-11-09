@@ -13,7 +13,7 @@ def NormalizeData(data):
 def plot_distance():
     filenames = os.listdir('./experiments/')
 
-    fig, axs = plt.subplots(4, 3, figsize=(8,10), layout='constrained')
+    fig, axs = plt.subplots(6, 3, figsize=(15,15), layout='constrained')
 
     for ax, filename in zip(axs.flat, filenames):
         with open('./experiments/' + filename, 'rb') as file:
@@ -30,9 +30,9 @@ def plot_distance():
         epsilons = NormalizeData(epsilon_sample)
         distances = NormalizeData(distance_sample)
         loss = NormalizeData(loss_sample)
-        steps = len(epsilons)
+        steps = len(epsilon_sample)
 
-        ax.plot(epsilons, label='epsilon')
+        #ax.plot(epsilons, label='epsilon')
         ax.plot(distances, label='distances')
         ax.plot(loss, label='loss')
         ax.legend(loc=0, prop={'size': 4})
@@ -42,8 +42,8 @@ def plot_distance():
         fontsize = rect_height_inch * 4
 
         title = filename.split('/')
-
-        ax.set_title(f"Steps: {steps}, S: {title[-1]}, MiDist: {min_dist}", fontsize=fontsize)
+        title = title[-1].split('.')
+        ax.set_title(f"Steps: {steps}, S: {title[0]}, MinDist: {min_dist}", fontsize=fontsize)
 
         ax.set_xlabel("Steps")
         ax.set_ylabel("Distance - Loss")

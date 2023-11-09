@@ -19,7 +19,7 @@ FMN parametric strategy
 """
 
 
-def run_experiments(steps=50, batch_size=10, batch_number=1):
+def run_experiments(steps=40, batch_size=1, batch_number=1):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model('Gowal2021Improving_R18_ddpm_100m', 'cifar10')
     dataset = load_dataset('cifar10')
@@ -37,7 +37,7 @@ def run_experiments(steps=50, batch_size=10, batch_number=1):
     for i in range(len(fmn_dict)):
         print("Running:", fmn_dict[str(i)])
         attack = FMN(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
-                     scheduler=fmn_dict[str(i)]['scheduler'])
+                     scheduler=fmn_dict[str(i)]['scheduler'], gradient_strategy=fmn_dict[str(i)]['gradient_strategy'])
         adv_x = attack.forward(samples, labels)
         clean_acc = clean_accuracy(model, samples, labels)
         print("Clean Accuracy", clean_acc)
@@ -49,11 +49,11 @@ def run_experiments(steps=50, batch_size=10, batch_number=1):
         if not os.path.exists(directory):
             os.makedirs(directory)
         filename = os.path.join(directory,
-                                f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-{fmn_dict[str(i)]["loss"]}.pkl')
+                                f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}.pkl')
         # Save the object to a pickle file
         with open(filename, 'wb') as file:
             pickle.dump(attack_data, file)
 
 
-#run_experiments()
+run_experiments()
 plot_distance()

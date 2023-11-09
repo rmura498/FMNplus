@@ -25,7 +25,7 @@ class FMN:
         norm (float): The norm for distance measure. Defaults to float('inf').
         steps (int): The number of steps for the attack. Defaults to 10.
         alpha_init (float): The initial alpha for the attack. Defaults to 1.0.
-        alpha_final (Optional[float]): The final alpha for the attack. Defaults to alpha_init / 100 if not provided.
+        alpha_final (Optional[float]): The final alpha for the attack.ha Defaults to alpha_init / 100 if not provided.
         gamma_init (float): The initial gamma for the attack. Defaults to 0.05.
         gamma_final (float): The final gamma for the attack. Defaults to 0.001.
         starting_points (Optional[Tensor]): The starting points for the attack. Defaults to None.
@@ -46,7 +46,9 @@ class FMN:
                  targeted=False,
                  loss='LL',
                  optimizer='SGD',
-                 scheduler='CALR'
+                 scheduler='CALR',
+                 gradient_strategy='Normalization'
+
                  ):
         self.model = model
         self.norm = norm
@@ -60,6 +62,7 @@ class FMN:
         self.device = device
         self.targeted = targeted
         self.loss = loss
+        self.gradient_strategy = gradient_strategy
 
         optimizers = {
             'SGD': SGD,
@@ -88,6 +91,20 @@ class FMN:
         self.scheduler = schedulers[scheduler]
         self.scheduler_name = scheduler
 
+    def _gradient_update(self, delta_grad, batch_view, step_size):
+
+        if self.gradient_strategy == 'Normalization':
+            # normalize gradient
+            grad_l2_norms = delta_grad.flatten(1).norm(p=self.norm, dim=1).clamp_(min=1e-12)
+            delta_grad.div_(batch_view(grad_l2_norms))
+
+        elif self.gradient_strategy == 'Projection':
+            oned_delta = torch.linalg.norm(delta_grad.data.flatten(1), dim=1, ord=self.norm)
+            dot_product = torch.dot(oned_delta, torch.ones_like(oned_delta) * step_size)
+            delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
+
+        return delta_grad
+
     def _boundary_search(self, images, labels):
         batch_size = len(images)
         _, _, mid_point = self._dual_projection_mid_points[self.norm]
@@ -108,9 +125,6 @@ class FMN:
         delta = mid_point(x0=images, x1=self.starting_points, epsilon=epsilon) - images
 
         return epsilon, delta, is_adv
-
-    def _init_attack(self):
-        pass
 
     def forward(self, images, labels):
 
@@ -180,8 +194,10 @@ class FMN:
                     labels_infhot=labels_infhot
                 )
 
+            logit_diffs = logit_diff_func(logits=logits)
+            ll = -(multiplier * logit_diffs)
+
             if self.loss == 'LL':
-                logit_diffs = logit_diff_func(logits=logits)
                 loss = -(multiplier * logit_diffs)
 
             elif self.loss == 'CE':
@@ -192,7 +208,7 @@ class FMN:
                 loss = dlr_loss(logits, labels)
 
             loss.sum().backward()
-            #print(loss, loss.shape)
+
             delta_grad = delta.grad.data
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
@@ -211,7 +227,7 @@ class FMN:
                                       torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
                 epsilon.clamp_(min=0)
             else:
-                distance_to_boundary = loss.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
+                distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
                 epsilon = torch.where(is_adv,
                                       torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
                                       torch.where(init_trackers['adv_found'],
@@ -222,9 +238,9 @@ class FMN:
             # clip epsilon
             epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
 
-            # normalize gradient
-            grad_l2_norms = delta_grad.flatten(1).norm(p=2, dim=1).clamp_(min=1e-12)
-            delta_grad.div_(batch_view(grad_l2_norms))
+            # gradient update strategy
+            delta_grad = self._gradient_update(delta_grad, batch_view, optimizer.param_groups[0]['lr'])
+            delta.grad.data = delta_grad
 
             optimizer.step()
 
