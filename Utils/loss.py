@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np
 
 def difference_of_logits(logits, labels, labels_infhot):
     if labels_infhot is None:
