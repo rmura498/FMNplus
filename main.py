@@ -35,9 +35,11 @@ def run_experiments(steps=40, batch_size=1, batch_number=1):
     samples, labels = next(dl_test_iter)
 
     for i in range(len(fmn_dict)):
+        print(i)
         print("Running:", fmn_dict[str(i)])
         attack = FMN(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
-                     scheduler=fmn_dict[str(i)]['scheduler'], gradient_strategy=fmn_dict[str(i)]['gradient_strategy'])
+                     scheduler=fmn_dict[str(i)]['scheduler'], gradient_strategy=fmn_dict[str(i)]['gradient_strategy'],
+                     initalization_strategy=fmn_dict[str(i)]['initialization_strategy'])
         adv_x = attack.forward(samples, labels)
         clean_acc = clean_accuracy(model, samples, labels)
         print("Clean Accuracy", clean_acc)
@@ -49,7 +51,9 @@ def run_experiments(steps=40, batch_size=1, batch_number=1):
         if not os.path.exists(directory):
             os.makedirs(directory)
         filename = os.path.join(directory,
-                                f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}.pkl')
+                                f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-'
+                                f'{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}-'
+                                f'{fmn_dict[str(i)]["initialization_strategy"]}.pkl')
         # Save the object to a pickle file
         with open(filename, 'wb') as file:
             pickle.dump(attack_data, file)

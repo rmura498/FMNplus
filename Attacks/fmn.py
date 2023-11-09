@@ -47,8 +47,8 @@ class FMN:
                  loss='LL',
                  optimizer='SGD',
                  scheduler='CALR',
-                 gradient_strategy='Normalization'
-
+                 gradient_strategy='Normalization',
+                 initalization_strategy='Standard'
                  ):
         self.model = model
         self.norm = norm
@@ -63,6 +63,7 @@ class FMN:
         self.targeted = targeted
         self.loss = loss
         self.gradient_strategy = gradient_strategy
+        self.initialization_strategy = initalization_strategy
 
         optimizers = {
             'SGD': SGD,
@@ -104,6 +105,30 @@ class FMN:
             delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
 
         return delta_grad
+    def _initialization(self, images, labels, batch_size):
+
+        delta = torch.zeros_like(images, device=self.device)
+        is_adv = None
+
+        if self.initialization_strategy == 'Starting Points':
+            if self.starting_points is None:
+                raise ValueError('Provide some starting points')
+            else:
+                epsilon, delta, is_adv = self._boundary_search(images, labels)
+                return epsilon, delta, is_adv
+
+        if self.norm == 0:
+            epsilon = torch.ones(batch_size,
+                                    device=self.device) if self.starting_points is None else \
+                                    delta.flatten(1).norm(p=0,dim=0)
+        else:
+            epsilon = torch.full((batch_size,), float('inf'), device=self.device)
+
+        if self.initialization_strategy == 'Random':
+            delta = torch.rand(images.shape)
+            delta = delta.clamp(0, 8/255)
+
+        return epsilon, delta, is_adv
 
     def _boundary_search(self, images, labels):
         batch_size = len(images)
@@ -138,18 +163,7 @@ class FMN:
         dual, projection, _ = self._dual_projection_mid_points[self.norm]
         batch_view = lambda tensor: tensor.view(batch_size, *[1] * (images.ndim - 1))
 
-        delta = torch.zeros_like(images, device=self.device)
-        is_adv = None
-
-        if self.starting_points is not None:
-            epsilon, delta, is_adv = self._boundary_search(images, labels)
-
-        if self.norm == 0:
-            epsilon = torch.ones(batch_size,
-                                 device=self.device) if self.starting_points is None else delta.flatten(1).norm(p=0,
-                                                                                                                dim=0)
-        else:
-            epsilon = torch.full((batch_size,), float('inf'), device=self.device)
+        epsilon, delta, is_adv = self._initialization(images, labels, batch_size)
 
         _worst_norm = torch.maximum(images, 1 - images).flatten(1).norm(p=self.norm, dim=1).detach()
 
@@ -196,6 +210,8 @@ class FMN:
 
             logit_diffs = logit_diff_func(logits=logits)
             ll = -(multiplier * logit_diffs)
+            ll.backward(retain_graph=True)
+            delta_grad = delta.grad.data
 
             if self.loss == 'LL':
                 loss = -(multiplier * logit_diffs)
@@ -205,11 +221,12 @@ class FMN:
                 loss = -c_loss(logits, labels)
 
             elif self.loss == 'DLR':
-                loss = dlr_loss(logits, labels)
+                loss = -dlr_loss(logits, labels)
 
-            loss.sum().backward()
 
-            delta_grad = delta.grad.data
+            #(loss + ll).sum().backward() 
+            #delta_grad = delta.grad.detach()
+
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']

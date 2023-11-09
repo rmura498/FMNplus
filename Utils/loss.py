@@ -17,3 +17,4 @@ def dlr_loss(x, y):
 
     return -(x[u, y] - x_sorted[:, -2] * ind - x_sorted[:, -1] * (
             1. - ind)) / (x_sorted[:, -1] - x_sorted[:, -3] + 1e-12)
+
