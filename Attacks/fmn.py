@@ -235,6 +235,11 @@ class FMN:
                                                   delta_norm + distance_to_boundary)
                                       )
 
+            #optimizer.zero_grad() da capire se lasciare o no
+            loss.sum().backward()
+            delta_grad = delta.grad.data
+
+
             # clip epsilon
             epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
 
