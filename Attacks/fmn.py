@@ -189,7 +189,7 @@ class FMN:
                 loss = -c_loss(logits, labels)
 
             elif self.loss == 'DLR':
-                loss = -dlr_loss(logits, labels)
+                loss = dlr_loss(logits, labels)
 
             loss.sum().backward()
             #print(loss, loss.shape)
