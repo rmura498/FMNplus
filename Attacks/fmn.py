@@ -210,6 +210,7 @@ class FMN:
 
             logit_diffs = logit_diff_func(logits=logits)
             ll = -(multiplier * logit_diffs)
+            ll.sum()
             ll.backward(retain_graph=True)
             delta_grad = delta.grad.data
 
