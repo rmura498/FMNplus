@@ -232,8 +232,13 @@ class FMN:
             projection(delta=delta.data, epsilon=epsilon)
             # clamp
             delta.data.add_(images).clamp_(min=0, max=1).sub_(images)
+            best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
+                                              dim=1, ord=self.norm)
 
-            scheduler.step()
+            if self.scheduler_name == 'RLROP':
+                scheduler.step(torch.median(best_distance).item())
+            else:
+                scheduler.step()
 
             _epsilon = epsilon.clone()
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)

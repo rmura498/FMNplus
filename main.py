@@ -10,7 +10,7 @@ from Utils.fmn_strategies import fmn_strategies
 
 """
 FMN parametric strategy 
-- the loss we're optimizing for the attack (CE, LL, DLR) 
+- the loss we're optimizing for the attack (CE, LL, DLR)
 - Initial point that we use for starting the attack 
 - The optimizer that we use 
 - the scheduler 
