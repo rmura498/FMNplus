@@ -39,7 +39,7 @@ def run_experiments(steps=40, batch_size=1, batch_number=1):
         print("Running:", fmn_dict[str(i)])
         attack = FMN(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
                      scheduler=fmn_dict[str(i)]['scheduler'], gradient_strategy=fmn_dict[str(i)]['gradient_strategy'],
-                     initalization_strategy=fmn_dict[str(i)]['initialization_strategy'])
+                     initialization_strategy=fmn_dict[str(i)]['initialization_strategy'])
         adv_x = attack.forward(samples, labels)
         clean_acc = clean_accuracy(model, samples, labels)
         print("Clean Accuracy", clean_acc)

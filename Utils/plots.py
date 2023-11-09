@@ -4,6 +4,8 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
+from Utils.metrics import compute_robust
+
 
 def NormalizeData(data):
     return 2*((data - np.min(data)) / (np.max(data) - np.min(data))) -1
@@ -50,4 +52,41 @@ def plot_distance():
         ax.grid()
 
     plt.show()
+    fig.savefig("example.pdf")
+
+
+def plot_epsilon_robust(distance,
+                        best_distances, aa_robust):
+    if len(distance) == 0:
+        print("Error: Not enough distances per experiment!")
+        return
+
+    fig, ax = plt.figure(figsize=(3,3))
+
+
+    # single experiment
+    steps = len(distance)
+
+    distances, robust_per_iter = compute_robust(distance, best_distances)
+
+    distances = np.array(distances)
+    distances.sort()
+    robust_per_iter.sort(reverse=True)
+
+    ax.plot(distances,
+            robust_per_iter)
+    ax.plot(8/255, aa_robust, 'x', label='AA')
+    ax.grid()
+
+    dpi = fig.dpi
+    rect_height_inch = ax.bbox.height / dpi
+    fontsize = rect_height_inch * 4
+    ax.set_title(f"Steps: {steps}",
+                 fontsize=fontsize)
+    ax.legend(loc=0, prop={'size': 8})
+    ax.set_xlabel(r"$||\boldsymbol{\delta}||_\infty$")
+    ax.set_ylabel("R. Acc.")
+
+
+    plt.xlim([0, 0.2])
     fig.savefig("example.pdf")

@@ -48,7 +48,7 @@ class FMN:
                  optimizer='SGD',
                  scheduler='CALR',
                  gradient_strategy='Normalization',
-                 initalization_strategy='Standard'
+                 initialization_strategy='Standard'
                  ):
         self.model = model
         self.norm = norm
@@ -63,7 +63,7 @@ class FMN:
         self.targeted = targeted
         self.loss = loss
         self.gradient_strategy = gradient_strategy
-        self.initialization_strategy = initalization_strategy
+        self.initialization_strategy = initialization_strategy
 
         optimizers = {
             'SGD': SGD,
@@ -285,4 +285,4 @@ class FMN:
             self.attack_data['distance'].append(_distance)
             self.attack_data['epsilon'].append(_epsilon)
 
-        return init_trackers['best_adv']
+        return init_trackers['best_adv'], best_distance
