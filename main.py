@@ -19,7 +19,7 @@ FMN parametric strategy
 """
 
 
-def run_experiments(steps=40, batch_size=1, batch_number=1):
+def run_experiments(steps=50, batch_size=10, batch_number=1):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model('Gowal2021Improving_R18_ddpm_100m', 'cifar10')
     dataset = load_dataset('cifar10')
@@ -60,4 +60,4 @@ def run_experiments(steps=40, batch_size=1, batch_number=1):
 
 
 run_experiments()
-plot_distance()
+#plot_distance()
