@@ -1,3 +1,4 @@
 torch == 2.1.0
 torchvision
+matplotlib
 git+https://github.com/RobustBench/robustbench.git
