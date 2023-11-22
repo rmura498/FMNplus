@@ -1,14 +1,16 @@
+import os, pickle, math, argparse
+
 import torch
-import math
-import os
-import pickle
+
 from Attacks.fmn import FMN
-import numpy as np
-from Utils.load_model import load_dataset, load_model
-from robustbench.utils import clean_accuracy
+from Utils.load_model import load_dataset, load_model, load_data
 from Utils.plots import plot_distance
 from Utils.fmn_strategies import fmn_strategies
 from Utils.comparing_strategies import evaluate_strategies
+
+from config import MODEL_DATASET, EXP_DIRECTORY
+
+from robustbench.utils import clean_accuracy
 
 """
 FMN parametric strategy 
@@ -20,12 +22,25 @@ FMN parametric strategy
 
 """
 
+parser = argparse.ArgumentParser(description='Perform multiple attacks using FMN+, a parametric version of FMN.')
+parser.add_argument('-mn', '--model_numbers',
+                    default=0,
+                    help='How many models you want to test.')
+parser.add_argument('-s', '--steps',
+                    default=30,
+                    help='Provide the number of steps of a single attack.')
+parser.add_argument('-bs', '--batch_size',
+                    default=10,
+                    help='Provide the batch size.')
 
-def run_experiments(steps=30, batch_size=10, batch_number=1):
+args = parser.parse_args()
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def run_experiments(model_id=0, steps=30, batch_size=10):
     # model definition
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model('Gowal2021Improving_R18_ddpm_100m', 'cifar10')
-    dataset = load_dataset('cifar10')
+    model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval()
     model.to(device)
 
@@ -33,16 +48,13 @@ def run_experiments(steps=30, batch_size=10, batch_number=1):
     fmn_dict = fmn_strategies()
 
     # dataset definition
-    dataset_frac = list(range(math.floor(len(dataset) * 0.5) + 1, len(dataset)))
-    dataset_frac = torch.utils.data.Subset(dataset, dataset_frac)
-    dl_test = torch.utils.data.DataLoader(dataset_frac, batch_size=1, shuffle=False)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
 
     samples = torch.empty([1, 3, 32, 32])
     labels = torch.empty([1], dtype=torch.int64)
     i = 0
 
-
-    for sample, label in dl_test:
+    for sample, label in dataloader:
         y_pred = model(sample.reshape(1, 3, 32, 32))
         y_pred = torch.argmax(y_pred)
 
@@ -52,14 +64,14 @@ def run_experiments(steps=30, batch_size=10, batch_number=1):
             i += 1
         if i >= batch_size:
             break
-    print(samples)
+    # print(samples)
     samples = samples[1:]
     labels = labels[1:]
 
-    print(labels.shape)
+    # print(labels.shape)
     clean_acc = clean_accuracy(model, samples, labels)
     print("clean accuracy", clean_acc)
-    print(labels)
+    # print(labels)
 
     for i in range(len(fmn_dict)):
         print(i)
@@ -73,10 +85,9 @@ def run_experiments(steps=30, batch_size=10, batch_number=1):
         print(f"Robust Accuracy:{fmn_dict[str(i)]}", robust_acc)
         attack_data = attack.attack_data
 
-        directory = './experiments/'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        filename = os.path.join(directory,
+        current_exp_dir = os.path.join(EXP_DIRECTORY, model_name, dataset_name)
+        if not os.path.exists(current_exp_dir): os.makedirs(current_exp_dir)
+        filename = os.path.join(current_exp_dir,
                                 f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-'
                                 f'{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}-'
                                 f'{fmn_dict[str(i)]["initialization_strategy"]}.pkl')
@@ -84,8 +95,16 @@ def run_experiments(steps=30, batch_size=10, batch_number=1):
         with open(filename, 'wb') as file:
             pickle.dump(attack_data, file)
 
-    evaluate_strategies(batch_size)
+    # evaluate_strategies(batch_size)
 
 
-run_experiments()
-# plot_distance()
+if __name__ == '__main__':
+    model_numbers = int(args.model_numbers)
+    steps = int(args.steps)
+    batch_size = int(args.batch_size)
+
+    if model_numbers > len(MODEL_DATASET.keys()):
+        model_numbers = len(MODEL_DATASET.keys())
+
+    for i in range(6, 8):
+        run_experiments(model_id=i, steps=steps, batch_size=batch_size)
