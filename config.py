@@ -1,3 +1,5 @@
+EXP_DIRECTORY = './Experiments'
+
 MODEL_DATASET = {
     0: {
         'model_name': 'Wang2023Better_WRN-70-16',
