@@ -105,6 +105,7 @@ class FMN:
             delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
 
         return delta_grad
+
     def _initialization(self, images, labels, batch_size):
 
         delta = torch.zeros_like(images, device=self.device)
@@ -255,7 +256,6 @@ class FMN:
             #optimizer.zero_grad() da capire se lasciare o no
             loss.sum().backward()
             delta_grad = delta.grad.data
-
 
             # clip epsilon
             epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
