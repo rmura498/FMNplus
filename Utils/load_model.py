@@ -58,4 +58,4 @@ def load_data(model_id=0, dataset_id=0, norm='inf'):
     model = load_model(model_name, dataset_name, norm)
     dataset = load_dataset(dataset_name)
 
-    return model, dataset
+    return model, dataset, model_name, dataset_name
