@@ -23,13 +23,14 @@ def evaluate_strategies(batch_size=10):
     df_columns = ['Strategies - [Opt-Sch-Loss-Grad-Init]']
     BIG_DF = pd.DataFrame(columns=df_columns+sample_columns+['winner'])
 
-    filenames = os.listdir('../experiments/')
+    path = '../Experiments/Sehwag2021Proxy_ResNest152/cifar10/'
+    filenames = os.listdir(path)
 
     for i, filename in enumerate(filenames):
         splits = filename.split('.')
         strategy = splits[0]
         try:
-            with open(os.path.join("../experiments/", filename), 'rb') as file:
+            with open(os.path.join(path, filename), 'rb') as file:
                 attack_data = pickle.load(file)
         except FileNotFoundError:
             continue
@@ -47,7 +48,7 @@ def evaluate_strategies(batch_size=10):
 
         BIG_DF.loc[i] = [strategy] + min_distances + [0]
     min_values = BIG_DF.min()
-    with open("min_comparison_latex.txt", "w+") as file:
+    with open("min_comparison_latex2.txt", "w+") as file:
         latex_string = min_values.to_latex()
         file.writelines(latex_string)
     print(min_values)
@@ -58,10 +59,12 @@ def evaluate_strategies(batch_size=10):
         BIG_DF['winner'] += is_min.astype(int)
 
     # Display the updated DataFrame
-    with open("comparison.csv", "w+") as file:
-        file.writelines(BIG_DF.to_csv(index=False, float_format='%.7f'))
-    with open("tuning_comparison_latex.txt", "w+") as file:
+    #with open("comparison.csv", "w+") as file:
+    #    file.writelines(BIG_DF.to_csv(index=False, float_format='%.7f'))
+    with open("tuning_comparison_latex2.txt", "w+") as file:
         latex_string = BIG_DF.to_latex()
         file.writelines(latex_string)
 
 
+
+evaluate_strategies(batch_size=2)
