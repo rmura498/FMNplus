@@ -12,7 +12,7 @@ from Utils.load_model import load_data
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
+def compare_AA_fmn(model_id, steps, batch_size, epsilon=None, loss='LL', optimizer='SGD',
                              scheduler='CALR',
                              gradient_strategy='Normalization',
                              initialization_strategy='Standard', exp_name='base',
