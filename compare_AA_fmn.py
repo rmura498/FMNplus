@@ -32,7 +32,12 @@ args = parser.parse_args()
 model_id = int(args.model_id)
 steps = int(args.steps)
 batch_size = int(args.batch_size)
-epsilon = float(args.epsilon)
+
+if args.epsilon is not None:
+    epsilon = float(args.epsilon)
+else:
+    epsilon = None
+
 exp_name = args.exp_name
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
