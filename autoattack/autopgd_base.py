@@ -145,6 +145,7 @@ class APGDAttack():
         self.is_tf_model = is_tf_model
         self.y_target = None
         self.logger = logger
+        self.loss_total = []
 
         assert self.norm in ['Linf', 'L2', 'L1']
         assert not self.eps is None
@@ -269,6 +270,7 @@ class APGDAttack():
                     logits = self.model(x_adv)
                     loss_indiv = criterion_indiv(logits, y)
                     loss = loss_indiv.sum()
+                    # self.loss_total.append(-loss_indiv.detach().item())
 
                 grad += torch.autograd.grad(loss, [x_adv])[0].detach()
             else:
@@ -367,6 +369,7 @@ class APGDAttack():
                         logits = self.model(x_adv)
                         loss_indiv = criterion_indiv(logits, y)
                         loss = loss_indiv.sum()
+                        self.loss_total.append(-loss.detach().item())
     
                     grad += torch.autograd.grad(loss, [x_adv])[0].detach()
                 else:
