@@ -1,4 +1,3 @@
-import argparse
 from datetime import datetime
 
 import torch
@@ -11,42 +10,17 @@ from Utils.fmn_strategies import fmn_strategies
 from Utils.load_model import load_data
 
 
-parser = argparse.ArgumentParser(description='Perform multiple attacks using FMN+, a parametric version of FMN.')
-parser.add_argument('-mid', '--model_id',
-                    default=0,
-                    help='Model id to test.')
-parser.add_argument('-s', '--steps',
-                    default=30,
-                    help='Provide the number of steps of a single attack.')
-parser.add_argument('-bs', '--batch_size',
-                    default=10,
-                    help='Provide the batch size.')
-parser.add_argument('-eps', '--epsilon',
-                    default=None,
-                    help='Provide epsilon value.')
-
-parser.add_argument('-en', '--exp_name', default='base')
-
-args = parser.parse_args()
-
-model_id = int(args.model_id)
-steps = int(args.steps)
-batch_size = int(args.batch_size)
-
-if args.epsilon is not None:
-    epsilon = float(args.epsilon)
-else:
-    epsilon = None
-
-exp_name = args.exp_name
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
                              scheduler='CALR',
                              gradient_strategy='Normalization',
                              initialization_strategy='Standard', exp_name='base',
-                             norm = 'Linf', shuffle=False):
+                             norm = 'Linf', shuffle=False,
+                             AA_attack_to_run=['apgd-ce',],
+                             AA_n_restarts=5,
+                             AA_epsilon=8/255
+                   ):
     # model definition
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval()
@@ -84,9 +58,9 @@ def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
         label = torch.tensor([labels[i],])
 
         # running autoattack
-        adversary = AutoAttack(model, norm=norm, eps=8/255, version='standard', device=device)
-        adversary.attacks_to_run = ['apgd-ce',]
-        adversary.apgd.n_restarts = 5
+        adversary = AutoAttack(model, norm=norm, eps=AA_epsilon, version='standard', device=device)
+        adversary.attacks_to_run = AA_attack_to_run
+        adversary.apgd.n_restarts = AA_n_restarts
         adversary.apgd.n_iter = steps
 
         adversary.run_standard_evaluation(sample, label, bs=1)
