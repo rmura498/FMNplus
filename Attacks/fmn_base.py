@@ -215,10 +215,11 @@ class FMN:
                     labels_infhot=labels_infhot
                 )
 
-            #logit_diffs = logit_diff_func(logits=logits)
-            #ll = -(multiplier * logit_diffs)
-            #ll.sum().backward()
-            #delta_grad = delta.grad.data
+            if self.epsilon is None:
+                logit_diffs = logit_diff_func(logits=logits)
+                ll = -(multiplier * logit_diffs)
+                ll.sum().backward(retain_graph=True)
+                delta_grad = delta.grad.data
 
             if self.loss == 'LL':
                 logit_diffs = logit_diff_func(logits=logits)
@@ -231,8 +232,6 @@ class FMN:
             elif self.loss == 'DLR':
                 loss = -dlr_loss(logits, labels)
 
-            loss.sum().backward()
-            delta_grad = delta.grad.data
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']
@@ -241,28 +240,29 @@ class FMN:
             init_trackers['best_norm'] = torch.where(is_both, delta_norm, init_trackers['best_norm'])
             init_trackers['best_adv'] = torch.where(batch_view(is_both), adv_images.detach(),
                                                     init_trackers['best_adv'])
+            if self.epsilon is None:
+                if self.norm == 0:
+                    epsilon = torch.where(is_adv,
+                                          torch.minimum(torch.minimum(epsilon - 1,
+                                                                      (epsilon * (1 - gamma)).floor_()),
+                                                        init_trackers['best_norm']),
+                                          torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
+                    epsilon.clamp_(min=0)
+                else:
+                    distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
+                    epsilon = torch.where(is_adv,
+                                          torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
+                                          torch.where(init_trackers['adv_found'],
+                                                      epsilon * (1 + gamma),
+                                                      delta_norm + distance_to_boundary)
+                                          )
 
-            if self.norm == 0:
-                epsilon = torch.where(is_adv,
-                                      torch.minimum(torch.minimum(epsilon - 1,
-                                                                  (epsilon * (1 - gamma)).floor_()),
-                                                    init_trackers['best_norm']),
-                                      torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
-                epsilon.clamp_(min=0)
-            else:
-                distance_to_boundary = loss.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
-                epsilon = torch.where(is_adv,
-                                      torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
-                                      torch.where(init_trackers['adv_found'],
-                                                  epsilon * (1 + gamma),
-                                                  delta_norm + distance_to_boundary)
-                                      )
-
-            # loss.sum().backward()
-            # delta_grad = delta.grad.data
+            loss.sum().backward()
+            delta_grad = delta.grad.data
 
             # clip epsilon
-            epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
+            if self.epsilon is None:
+                epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
 
             # gradient update strategy
             delta_grad = self._gradient_update(delta_grad, batch_view, optimizer.param_groups[0]['lr'])
