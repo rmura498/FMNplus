@@ -46,7 +46,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
                              scheduler='CALR',
                              gradient_strategy='Normalization',
-                             initialization_strategy='Standard', exp_name='base'):
+                             initialization_strategy='Standard', exp_name='base',
+                             norm = 'Linf', shuffle=False):
     # model definition
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval()
@@ -56,7 +57,7 @@ def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
     fmn_dict = fmn_strategies()
 
     # dataset definition
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=shuffle)
 
     samples = torch.empty([1, 3, 32, 32])
     labels = torch.empty([1], dtype=torch.int64)
@@ -84,7 +85,7 @@ def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
         label = torch.tensor([labels[i],])
 
         # running autoattack
-        adversary = AutoAttack(model, norm='Linf', eps=8/255, version='standard', device=device)
+        adversary = AutoAttack(model, norm=norm, eps=8/255, version='standard', device=device)
         adversary.attacks_to_run = ['apgd-ce',]
         adversary.apgd.n_restarts = 5
         adversary.apgd.n_iter = steps
@@ -92,11 +93,18 @@ def compare_AA_fmn(model_id, steps, batch_size, loss='LL', optimizer='SGD',
         adversary.run_standard_evaluation(sample, label, bs=1)
         # print(len(adversary.apgd.loss_total))
 
+        norm_to_num = {
+            'Linf': float('inf'),
+            'L2': 2,
+            'L1': 1,
+            'L0': 0
+        }
+
         # running FMN
         strategy = fmn_dict['0']
         attack = FMN_base(model, steps=steps, loss=loss, device=device, epsilon=epsilon,
                           initialization_strategy=initialization_strategy, gradient_strategy=gradient_strategy,
-                          scheduler=scheduler, optimizer=optimizer)
+                          scheduler=scheduler, optimizer=optimizer, norm=norm_to_num[norm])
 
         adv_x, best_distance = attack.forward(sample, label)
         last_dist = attack.attack_data['distance'][-1]
