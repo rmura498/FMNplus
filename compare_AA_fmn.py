@@ -21,14 +21,18 @@ parser.add_argument('-s', '--steps',
 parser.add_argument('-bs', '--batch_size',
                     default=10,
                     help='Provide the batch size.')
+parser.add_argument('-eps', '--epsilon',
+                    default=None,
+                    help='Provide epsilon value.')
 
 parser.add_argument('-en', '--exp_name', default='base')
 
 args = parser.parse_args()
 
-model_id = 8
-steps = 30
-batch_size = 10
+model_id = int(args.model_id)
+steps = int(args.steps)
+batch_size = int(args.batch_size)
+epsilon = float(args.epsilon)
 exp_name = args.exp_name
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -78,32 +82,23 @@ for i in range(batch_size):
 
     # running FMN
     strategy = fmn_dict['0']
-    attack = FMN_saliency(model, steps=steps, loss='LL', device=device)
+    attack = FMN_base(model, steps=steps, loss='LL', device=device)
 
     adv_x, best_distance = attack.forward(sample, label)
     last_dist = attack.attack_data['distance'][-1]
     print(f"Sample[{i}]\nLast distance:\n{last_dist}")
 
-    '''
-    for j in range(4):
-        attack = FMN_saliency(model, steps=steps, loss='LL', device=device)
-        adv_x, best_distance = attack.forward(sample, label)
-        last_dist = attack.attack_data['distance'][-1]
-        print(f"Sample[{i}]--FMN_restart[{j}]\nBest distance:\n{best_distance}")
-    '''
-
-
     # plot losses
     fig, ax = plt.subplots(figsize=(4,4))
 
     steps_x = np.arange(0, steps)
-    ax.plot(steps_x, adversary.apgd.loss_total[-steps:], label='Bad loss')
-    ax.plot(steps_x, [loss_indiv.detach().item() for loss_indiv in attack.attack_data['loss'][-steps:]], label='Good loss')
+    ax.plot(steps_x, adversary.apgd.loss_total[-steps:], label='AA loss')
+    ax.plot(steps_x, [loss_indiv.detach().item() for loss_indiv in attack.attack_data['loss'][-steps:]], label='FMN loss')
 
     ax.legend()
 
     # Get current date
     current_date = datetime.now()
     formatted_date = current_date.strftime("%d%m%y")
-    fig.savefig(f"AA_FMN_loss_comparison_{formatted_date}_{i}_saliency.pdf")
+    fig.savefig(f"AA_FMN_loss_comparison_{formatted_date}_{i}.pdf")
 
