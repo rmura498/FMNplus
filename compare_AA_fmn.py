@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from autoattack.autoattack import AutoAttack
 
 from Attacks.fmn_base import FMN as FMN_base
-from Attacks.fmn_base_saliency_test import FMN as FMN_saliency
 from Utils.fmn_strategies import fmn_strategies
 from Utils.load_model import load_data
 
