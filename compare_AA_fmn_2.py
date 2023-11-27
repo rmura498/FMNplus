@@ -59,9 +59,6 @@ def compare_AA_fmn(
 
     print(f"Sample id: {random_sample_index}")
 
-    loss_fmn = []
-    loss_AA = []
-
     # running autoattack
     adversary = AutoAttack(model, norm=norm, eps=AA_epsilon, version='standard', device=device)
     adversary.attacks_to_run = AA_attack_to_run
@@ -101,8 +98,8 @@ def compare_AA_fmn(
     formatted_date = current_date.strftime("%d%m%y")
     fig.savefig(f"AA_FMN_loss_comparison_{formatted_date}_{exp_name}.pdf")
 
-    loss_AA.append(adversary.apgd.loss_total[-steps:])
-    loss_fmn.append(attack.attack_data['loss'][-steps:])
+    loss_AA = adversary.apgd.loss_total[-steps:]
+    loss_fmn = attack.attack_data['loss'][-steps:]
 
     return loss_fmn, loss_AA
 
