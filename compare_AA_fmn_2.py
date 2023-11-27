@@ -90,6 +90,7 @@ def compare_AA_fmn(
     ax.plot(steps_x, adversary.apgd.loss_total[-steps:], label='AA loss')
     ax.plot(steps_x, [loss_indiv.detach().item() for loss_indiv in attack.attack_data['loss'][-steps:]], label='FMN loss')
 
+    ax.grid()
     ax.legend()
 
     # Get current date
