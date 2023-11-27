@@ -46,7 +46,6 @@ def compare_AA_fmn(
     misclassified = True
     while misclassified:
         random_sample_index = random.randint(0, len(cifar_dataset) - 1)
-        print(random_sample_index)
         sample, label = cifar_dataset[random_sample_index]
         sample = sample.unsqueeze(0)
 
@@ -56,6 +55,7 @@ def compare_AA_fmn(
         misclassified = (y_pred != label)
         if misclassified: print("misclassified sample, changing...")
 
+    label = torch.tensor([label,])
     print(f"Sample id: {random_sample_index}")
 
     # running autoattack
