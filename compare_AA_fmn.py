@@ -12,15 +12,24 @@ from Utils.load_model import load_data
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def compare_AA_fmn(model_id, steps, batch_size, epsilon=None, loss='LL', optimizer='SGD',
-                             scheduler='CALR',
-                             gradient_strategy='Normalization',
-                             initialization_strategy='Standard', exp_name='base',
-                             norm = 'Linf', shuffle=False,
-                             AA_attack_to_run=['apgd-ce',],
-                             AA_n_restarts=5,
-                             AA_epsilon=8/255
-                   ):
+
+def compare_AA_fmn(
+        model_id,
+        steps,
+        batch_size,
+        epsilon=None,
+        loss='LL',
+        optimizer='SGD',
+        scheduler='CALR',
+        gradient_strategy='Normalization',
+        initialization_strategy='Standard',
+        norm='Linf',
+        AA_attack_to_run=['apgd-ce',],
+        AA_n_restarts=5,
+        AA_epsilon=8/255,
+        shuffle=False,
+        exp_name='base'
+):
     # model definition
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval()

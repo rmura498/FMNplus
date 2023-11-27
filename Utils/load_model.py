@@ -19,18 +19,16 @@ def load_dataset(dataset_name='cifar10'):
     return dataset
 
 
-def load_model(model_name, dataset_name, norm='inf'):
+def load_model(model_name, dataset_name, norm="Linf"):
     if norm not in MODEL_NORMS:
-        norm = 'inf'
-
-    norm_name = f'L{norm}'
+        norm = "Linf"
 
     try:
         model = rb_load_model(
             model_dir="./Models/pretrained",
             model_name=model_name,
             dataset=dataset_name,
-            norm=norm_name
+            norm=norm
         )
     except KeyError:
         model = rb_load_model(

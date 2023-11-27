@@ -32,4 +32,4 @@ MODEL_DATASET = {
 
 }
 
-MODEL_NORMS = [0, 1, 2, 'inf']
+MODEL_NORMS = ["L0", "L1", "L2", "Linf"]
