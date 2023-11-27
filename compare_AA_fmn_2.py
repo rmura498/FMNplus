@@ -100,7 +100,7 @@ def compare_AA_fmn(
     loss_AA = adversary.apgd.loss_total[-steps:]
     loss_fmn = attack.attack_data['loss'][-steps:]
 
-    return loss_fmn, loss_AA
+    return loss_fmn, loss_AA, random_sample_index
 
 
 if __name__ == '__main__':
