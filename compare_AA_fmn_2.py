@@ -12,12 +12,7 @@ from Attacks.fmn_base import FMN as FMN_base
 from Utils.fmn_strategies import fmn_strategies
 from Utils.load_model import load_data
 
-seed = 42
-torch.manual_seed(seed)
-random.seed(seed)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 def compare_AA_fmn(
         model_id=8,
@@ -32,8 +27,12 @@ def compare_AA_fmn(
         AA_attack_to_run=['apgd-ce',],
         AA_n_restarts=5,
         AA_epsilon=8/255,
-        exp_name='base'
+        exp_name='base',
+        seed=42
 ):
+    torch.manual_seed(seed)
+    random.seed(seed)
+
     # model definition
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval()
