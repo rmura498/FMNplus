@@ -231,6 +231,8 @@ class APGDAttack():
         x_adv = x_adv.clamp(0., 1.)
         x_best = x_adv.clone()
         x_best_adv = x_adv.clone()
+
+        # qui forse c'è la loss originale
         loss_steps = torch.zeros([self.n_iter, x.shape[0]]
             ).to(self.device)
         loss_best_steps = torch.zeros([self.n_iter + 1, x.shape[0]]
@@ -369,7 +371,7 @@ class APGDAttack():
                         logits = self.model(x_adv)
                         loss_indiv = criterion_indiv(logits, y)
                         loss = loss_indiv.sum()
-                        self.loss_total.append(-loss.detach().item())
+                        # self.loss_total.append(-loss.detach().item())
     
                     grad += torch.autograd.grad(loss, [x_adv])[0].detach()
                 else:
@@ -442,7 +444,8 @@ class APGDAttack():
                   #k = max(k - self.size_decr, self.n_iter_min)
 
         #
-        
+
+        self.loss_total = loss_steps.detach().clone()
         return (x_best, acc, loss_best, x_best_adv)
 
     def perturb(self, x, y=None, best_loss=False, x_init=None):
