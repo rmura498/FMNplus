@@ -206,8 +206,7 @@ class APGDAttack():
 
         if self.norm == 'Linf':
             t = 2 * torch.rand(x.shape).to(self.device).detach() - 1
-            x_adv = x + self.eps * torch.ones_like(x
-                ).detach() * self.normalize(t)
+            x_adv = x + self.eps * torch.ones_like(x).detach() * self.normalize(t)
         elif self.norm == 'L2':
             t = torch.randn(x.shape).to(self.device).detach()
             x_adv = x + self.eps * torch.ones_like(x
@@ -216,10 +215,6 @@ class APGDAttack():
             t = torch.randn(x.shape).to(self.device).detach()
             delta = L1_projection(x, t, self.eps)
             x_adv = x + t + delta
-            
-        
-        
-        
         
         if not x_init is None:
             x_adv = x_init.clone()
@@ -320,6 +315,8 @@ class APGDAttack():
         n_reduced = 0
 
         u = torch.arange(x.shape[0], device=self.device)
+
+        grad = grad*0
         for i in range(self.n_iter):
             ### gradient step
             with torch.no_grad():
@@ -445,7 +442,8 @@ class APGDAttack():
 
         #
 
-        self.loss_total = loss_steps.detach().clone()
+        # self.loss_total = loss_steps.sum(dim=1)
+        self.loss_total = loss_steps.mean(dim=1)
         return (x_best, acc, loss_best, x_best_adv)
 
     def perturb(self, x, y=None, best_loss=False, x_init=None):
@@ -455,7 +453,7 @@ class APGDAttack():
         :param best_loss:   if True the points attaining highest loss
                             are returned, otherwise adversarial examples
         """
-
+        # ---------------------######------------------
         assert self.loss in ['ce', 'dlr'] #'ce-targeted-cfts'
         if not y is None and len(y.shape) == 0:
             x.unsqueeze_(0)
@@ -479,6 +477,7 @@ class APGDAttack():
         else:
             acc = y_pred != y
         loss = -1e10 * torch.ones_like(acc).float()
+        # loss = torch.zeros_like(acc).float()
         if self.verbose:
             print('-------------------------- ',
                 'running {}-attack with epsilon {:.5f}'.format(
@@ -486,8 +485,6 @@ class APGDAttack():
                 '--------------------------')
             print('initial accuracy: {:.2%}'.format(acc.float().mean()))
 
-        
-        
         if self.use_largereps:
             epss = [3. * self.eps_orig, 2. * self.eps_orig, 1. * self.eps_orig]
             iters = [.3 * self.n_iter_orig, .3 * self.n_iter_orig,
@@ -510,8 +507,7 @@ class APGDAttack():
                 if ind_to_fool.numel() != 0:
                     x_to_fool = x[ind_to_fool].clone()
                     y_to_fool = y[ind_to_fool].clone()
-                    
-                    
+
                     if not self.use_largereps:
                         res_curr = self.attack_single_run(x_to_fool, y_to_fool)
                     else:
@@ -614,7 +610,6 @@ class APGDAttack_targeted(APGDAttack):
         :param x:           clean images
         :param y:           clean labels, if None we use the predicted labels
         """
-
         assert self.loss in ['dlr-targeted'] #'ce-targeted'
         if not y is None and len(y.shape) == 0:
             x.unsqueeze_(0)
@@ -647,7 +642,7 @@ class APGDAttack_targeted(APGDAttack):
         torch.cuda.random.manual_seed(self.seed)
 
         #
-        
+
         if self.use_largereps:
             epss = [3. * self.eps_orig, 2. * self.eps_orig, 1. * self.eps_orig]
             iters = [.3 * self.n_iter_orig, .3 * self.n_iter_orig,
