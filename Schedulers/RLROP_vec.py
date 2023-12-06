@@ -53,18 +53,6 @@ class ReduceLROnPlateau:
         epoch = self.last_epoch + 1
         self.last_epoch = epoch
 
-        '''
-        if self.is_better(loss, self.best):
-            self.best = loss
-            self.num_bad_epochs = 0
-        else:
-            self.num_bad_epochs += 1
-
-        if self.num_bad_epochs > self.patience:
-            self._reduce_steps(steps, epoch)
-            self.num_bad_epochs = 0
-        '''
-
         loss_is_better = self.is_better(loss, self.best)
         self.best = torch.where(loss_is_better, loss, self.best)
         self.num_bad_epochs = torch.where(
@@ -79,7 +67,6 @@ class ReduceLROnPlateau:
 
         new_steps = torch.maximum(steps * self.factor, self.min_steps)
         steps_improved = (steps - new_steps > self.eps)
-        # print(f"Steps Improved:\{steps_improved}")
         patience_exp_and_is_better = patience_expired & steps_improved
         steps = torch.where(
             patience_exp_and_is_better,
