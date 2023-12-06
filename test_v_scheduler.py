@@ -16,12 +16,12 @@ from autoattack.autoattack import AutoAttack
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
-    batch_size = 50
+    batch_size = 5
     num_batches = 1
-    steps = 40
+    steps = 20
     loss = 'CE'
     optimizer = 'Adam'
-    norm = inf # same as float('inf')
+    norm = inf  # same as float('inf')
     alpha_init = 1
     alpha_final = None
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             eps=8/255,
             version='standard',
             device=device,
-            verbose=False
+            verbose=True
         )
         adversary.attacks_to_run = ['apgd-ce',]
         adversary.apgd.n_restarts = 1
@@ -89,6 +89,6 @@ if __name__ == '__main__':
     with open(filename, 'wb') as file:
         pickle.dump(loss_data, file)
 
-    # TODO: add success rate
+
 
 
