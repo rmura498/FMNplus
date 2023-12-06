@@ -291,12 +291,14 @@ class FMN:
 
             _epsilon = epsilon.clone()
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
-            if i == self.steps-1:
-                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True])*100/batch_size }% ")
-                print(f" {len(is_adv[is_adv==True])} out of {batch_size} successfully perturbed")
+
             # self.attack_data['loss'].append(loss.sum().item())
             self.attack_data['loss'].append(loss.mean().item())
             self.attack_data['distance'].append(_distance)
             self.attack_data['epsilon'].append(_epsilon)
+
+            if i == self.steps-1:
+                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True])*100/batch_size }% ")
+                print(f" {len(is_adv[is_adv==True])} out of {batch_size} successfully perturbed")
 
         return init_trackers['best_adv'], best_distance

@@ -99,8 +99,8 @@ class FMN:
 
         if self.gradient_strategy == 'Normalization':
             # normalize gradient
-            grad_l2_norms = delta_grad.flatten(1).norm(p=self.norm, dim=1).clamp_(min=1e-12)
-            delta_grad.div_(batch_view(grad_l2_norms))
+            grad_norms = delta_grad.flatten(1).norm(p=float('inf'), dim=1).clamp_(min=1e-12)
+            delta_grad.div_(batch_view(grad_norms))
 
         elif self.gradient_strategy == 'Projection':
             oned_delta = torch.linalg.norm(delta_grad.data.flatten(1), dim=1, ord=self.norm)
@@ -185,7 +185,7 @@ class FMN:
         if self.scheduler_name == 'CALR':
             scheduler = self.scheduler(optimizer, T_max=self.steps)
         else:
-            scheduler = self.scheduler(optimizer)
+            scheduler = self.scheduler(optimizer, factor=0.5)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
@@ -278,15 +278,19 @@ class FMN:
                                               dim=1, ord=self.norm)
 
             if self.scheduler_name == 'RLROP':
-                scheduler.step(torch.median(best_distance).item())
+                scheduler.step(loss.sum())
             else:
                 scheduler.step()
 
             _epsilon = epsilon.clone()
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
 
-            self.attack_data['loss'].append(loss)
+            self.attack_data['loss'].append(loss.mean().item())
             self.attack_data['distance'].append(_distance)
             self.attack_data['epsilon'].append(_epsilon)
+
+            if i == self.steps - 1:
+                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size}% ")
+                print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
 
         return init_trackers['best_adv'], best_distance
