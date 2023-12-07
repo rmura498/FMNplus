@@ -138,6 +138,22 @@ def plot_loss_AA_fmn_comparison(directory='../experiments/loss_AA_FMN_comparison
             axs_flat[j].grid()
         fig.savefig(f"{files_in_folder[i].replace('.pkl', '')}.pdf")
 
+'''
+if plot:
+    # plot losses
+    fig, ax = plt.subplots(figsize=(4, 4))
+
+    steps_x = np.arange(0, steps)
+    ax.plot(steps_x, loss_fmn_base, label='FMN Base loss')
+    ax.plot(steps_x, fmn_vec.attack_data['loss'], label='FMN Vec loss', linestyle='dotted')
+
+    ax.grid()
+    ax.legend()
+
+    fig_path = os.path.join(exp_path, f"SchedulerVecExps/FMN_vecVsBase_lossData"
+                                      f"_{optimizer}_steps{steps}_batch{batch_size}_eps_{epsilon_name}.pdf")
+    fig.savefig(fig_path)
+'''
 
 if __name__ == '__main__':
     plot_loss_AA_fmn_comparison()

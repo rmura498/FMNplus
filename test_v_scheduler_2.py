@@ -1,4 +1,12 @@
-import os, pickle
+'''
+07/12/2023
+Raffaele Mura, Giuseppe Floris, Luca Scionis
+
+Testing multiple FMN configuration against AutoAttack
+
+'''
+
+import os, pickle, argparse
 from datetime import datetime
 
 import torch
