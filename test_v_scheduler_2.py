@@ -5,9 +5,6 @@ import torch
 from torch import inf
 from torch.utils.data import DataLoader
 
-import numpy as np
-import matplotlib.pyplot as plt
-
 from Attacks.fmn_base_vec import FMN as FMNVec
 from Attacks.fmn_base import FMN as FMNBase
 from Utils.load_model import load_data
@@ -19,27 +16,33 @@ def main(
         batch_size = 10,
         num_batches = 1,
         steps = 30,
-        epsilon = 8/244, # None for dynamic one
+        epsilon = 8/255, # None for dynamic one
         loss='CE',
         optimizer = 'Adam',
         scheduler = 'RLROP',
         norm = inf,  # same as float('inf')
-        alpha_init = 1,
-        alpha_final = None,
-        verbose = True,
         model_id = 8,
-        plot = False,
-        shuffle=True
+        shuffle=True,
+        attack_type='FMNBase'
 ):
+    # creating exp folder
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%d%m%y%H")
+    epsilon_name = "8-255" if epsilon == 8 / 255 else "None"
+    exp_path = os.path.join("Exps", formatted_date, f"{attack_type}-eps{epsilon_name}"
+                                                    f"-bs{batch_size}-steps{steps}-loss{loss}")
+
+    if not os.path.exists(exp_path):
+        os.makedirs(exp_path)
 
     # loading model and dataset
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval().to(device)
 
-    # Dataloader
+    _bs = batch_size * 2
     dataloader = DataLoader(
         dataset=dataset,
-        batch_size=batch_size,
+        batch_size=_bs,
         shuffle=shuffle
     )
 
@@ -72,6 +75,7 @@ def main(
     )
 
     for i, (samples, labels) in enumerate(dataloader):
+        print(f"Cleaning misclassified on batch {i}")
         # clean misclassified
         logits = model(samples)
         pred_labels = logits.argmax(dim=1)
@@ -126,4 +130,35 @@ def main(
 
 
 if __name__ == '__main__':
-    main(batch_size=5, steps=50)
+    # retrieve parsed arguments
+    args = parser.parse_args()
+
+    batch_size = int(args.batch_size)
+    num_batches = int(args.num_batches)
+    steps = int(args.steps)
+    epsilon = float(args.epsilon)
+    loss = str(args.loss)
+    optimizer = str(args.optimizer)
+    scheduler = str(args.scheduler)
+    norm = float(args.norm)
+    model_id = int(args.model_id)
+    shuffle = bool(args.shuffle)
+    attack_type = str(args.attack_type)
+    cuda_device = int(args.cuda_device)
+
+    device = torch.device(f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed('42')
+
+    main(
+        batch_size=batch_size,
+        num_batches=num_batches,
+        steps=steps,
+        epsilon=epsilon,  # None for dynamic one
+        loss=loss,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        norm=norm,  # same as float('inf')
+        model_id=model_id,
+        shuffle=shuffle,
+        attack_type=attack_type
+    )

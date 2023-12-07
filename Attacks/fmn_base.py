@@ -158,14 +158,15 @@ class FMN:
 
         return epsilon, delta, is_adv
 
-    def forward(self, images, labels):
+    def forward(self, images, labels, batch_size = None):
 
         images = images.clone().detach().to(self.device)
         labels = labels.clone().detach().to(self.device)
 
         adv_images = images.clone().detach()
 
-        batch_size = len(images)
+        if batch_size is None:
+            batch_size = len(images)
 
         dual, projection, _ = self._dual_projection_mid_points[self.norm]
         batch_view = lambda tensor: tensor.view(batch_size, *[1] * (images.ndim - 1))
