@@ -28,7 +28,7 @@ class ReduceLROnPlateau:
     """
 
     def __init__(self, batch_size, factor=0.5, patience=5, threshold=1e-4,
-                 min_step=0, eps=1e-8, verbose=False):
+                 min_step=0, eps=1e-8, verbose=False, device='cpu'):
 
         if factor >= 1.0:
             raise ValueError('Factor should be < 1.0.')
@@ -38,11 +38,11 @@ class ReduceLROnPlateau:
             raise ValueError('Batch Size cannot be 0.')
         self.batch_size = batch_size
 
-        self.min_steps = torch.ones(batch_size) * min_step
-        self.patience = torch.ones(batch_size) * patience
+        self.min_steps = torch.ones(batch_size).to(device) * min_step
+        self.patience = torch.ones(batch_size).to(device) * patience
         self.threshold = threshold
         self.best = None
-        self.num_bad_epochs = torch.zeros(batch_size)
+        self.num_bad_epochs = torch.zeros(batch_size).to(device)
         self.eps = eps
         self.last_epoch = 0
         self.mode_worse = inf
