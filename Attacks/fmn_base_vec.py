@@ -51,7 +51,8 @@ class FMN:
                  optimizer='SGD',
                  scheduler='CALR',
                  gradient_strategy='Normalization',
-                 initialization_strategy='Standard'
+                 initialization_strategy='Standard',
+                 verbose=False
                  ):
         self.model = model
         self.norm = norm
@@ -97,17 +98,20 @@ class FMN:
         self.scheduler = schedulers[scheduler]
         self.scheduler_name = scheduler
 
+        self.verbose = verbose
+
     def _gradient_update(self, delta_grad, batch_view, step_size):
 
         if self.gradient_strategy == 'Normalization':
             # normalize gradient
             grad_norms = delta_grad.flatten(1).norm(p=float('inf'), dim=1).clamp_(min=1e-12)
             delta_grad.div_(batch_view(grad_norms))
-
         elif self.gradient_strategy == 'Projection':
-            oned_delta = torch.linalg.norm(delta_grad.data.flatten(1), dim=1, ord=self.norm)
-            dot_product = torch.dot(oned_delta, torch.ones_like(oned_delta) * step_size)
-            delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
+            # oned_delta = torch.linalg.norm(delta_grad.data.flatten(1), dim=1, ord=self.norm)
+            # dot_product = torch.dot(oned_delta, torch.ones_like(oned_delta) * step_size)
+            # delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
+            _, projection, _ = self._dual_projection_mid_points[float('inf')]
+            projection(delta=delta_grad, epsilon=step_size)
 
         return delta_grad
 
@@ -189,10 +193,30 @@ class FMN:
             scheduler = self.scheduler(optimizer, factor=0.5)
         '''
 
+        logits = self.model(adv_images)
+        labels_infhot = torch.zeros_like(logits).scatter_(
+            1,
+            labels.unsqueeze(1),
+            float('inf')
+        )
+        logit_diff_func = partial(
+            difference_of_logits,
+            labels=labels,
+            labels_infhot=labels_infhot
+        )
+
+        if self.loss == 'CE':
+            c_loss = nn.CrossEntropyLoss(reduction='none')
+            loss = lambda logits, labels: -c_loss(logits, labels)
+        elif self.loss == 'DLR':
+            loss = lambda logits, labels: -dlr_loss(logits, labels)
+        else:
+            loss = lambda logits, labels: -(multiplier * logit_diff_func(logits=logits))
+
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
 
-        scheduler_vec = RLROPvec(batch_size=batch_size)
+        scheduler_vec = RLROPvec(batch_size=batch_size, verbose=self.verbose)
         steps = torch.ones(batch_size) * self.alpha_init
 
         for i in range(self.steps):
@@ -208,38 +232,12 @@ class FMN:
             logits = self.model(adv_images)
             pred_labels = logits.argmax(dim=1)
 
-            if i == 0:
-                labels_infhot = torch.zeros_like(logits).scatter_(
-                    1,
-                    labels.unsqueeze(1),
-                    float('inf')
-                )
-                logit_diff_func = partial(
-                    difference_of_logits,
-                    labels=labels,
-                    labels_infhot=labels_infhot
-                )
-
             if self.epsilon is None:
                 logit_diffs = logit_diff_func(logits=logits)
                 ll = -(multiplier * logit_diffs)
-                ll.sum().backward(retain_graph=True)
+                v_ll = torch.dot(ll, steps)
+                v_ll.backward(retain_graph=True)
                 delta_grad = delta.grad.data
-
-            if self.loss == 'LL':
-                logit_diffs = logit_diff_func(logits=logits)
-                loss = -(multiplier * logit_diffs)
-
-            elif self.loss == 'CE':
-                c_loss = nn.CrossEntropyLoss(reduction='none')
-                loss = -c_loss(logits, labels)
-
-            elif self.loss == 'DLR':
-                loss = -dlr_loss(logits, labels)
-
-            print(f"loss[{i}]:\n{loss.sum()}")
-            print(f"steps[{i}]:\n{steps}")
-
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']
@@ -265,18 +263,20 @@ class FMN:
                                                       delta_norm + distance_to_boundary)
                                           )
 
-            v_loss = torch.dot(loss, steps)
+            t_loss = loss(logits, labels)
+            if self.verbose:
+                print(f"loss mean[{i}]:\n{t_loss.mean()}")
+                print(f"steps[{i}]:\n{steps}")
+
+            v_loss = torch.dot(t_loss, steps)
             v_loss.backward()
-            # loss.sum().backward()
-            delta_grad = delta.grad.data
 
             # clip epsilon
             if self.epsilon is None:
                 epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
 
             # gradient update strategy
-            delta_grad = self._gradient_update(delta_grad, batch_view, optimizer.param_groups[0]['lr'])
-            delta.grad.data = delta_grad
+            delta.grad.data = self._gradient_update(delta.grad.data, batch_view, optimizer.param_groups[0]['lr'])
 
             optimizer.step()
 
@@ -287,18 +287,18 @@ class FMN:
             best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
                                               dim=1, ord=self.norm)
 
-            steps = scheduler_vec.step(loss, steps)
+            steps = scheduler_vec.step(t_loss, steps)
 
             _epsilon = epsilon.clone()
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
 
             # self.attack_data['loss'].append(loss.sum().item())
-            self.attack_data['loss'].append(loss.mean().item())
+            self.attack_data['loss'].append(t_loss.mean().item())
             self.attack_data['distance'].append(_distance)
             self.attack_data['epsilon'].append(_epsilon)
 
-            if i == self.steps-1:
-                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True])*100/batch_size }% ")
-                print(f" {len(is_adv[is_adv==True])} out of {batch_size} successfully perturbed")
+            print(f"SUCCESS RATE: : {len(is_adv[is_adv == True])*100/batch_size:.2f}% ")
+            print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
+
 
         return init_trackers['best_adv'], best_distance
