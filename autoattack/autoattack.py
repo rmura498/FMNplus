@@ -24,6 +24,7 @@ class AutoAttack():
         self.is_tf_model = is_tf_model
         self.device = device
         self.logger = Logger(log_path)
+        self.success_rate = []
 
         if version in ['standard', 'plus', 'rand'] and attacks_to_run != []:
             raise ValueError("attacks_to_run will be overridden unless you use version='custom'")
@@ -232,7 +233,9 @@ class AutoAttack():
                         num_non_robust_batch = torch.sum(false_batch)    
                         self.logger.log('{} - {}/{} - {} out of {} successfully perturbed'.format(
                             attack, batch_idx + 1, n_batches, num_non_robust_batch, x.shape[0]))
-                
+                print("Success Rate:", num_non_robust_batch*100/x.shape[0])
+                self.success_rate.append(num_non_robust_batch*100/x.shape[0])
+
                 robust_accuracy = torch.sum(robust_flags).item() / x_orig.shape[0]
                 robust_accuracy_dict[attack] = robust_accuracy
                 state.add_run_attack(attack)

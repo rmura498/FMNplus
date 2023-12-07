@@ -82,7 +82,8 @@ class FMN:
         self.attack_data = {
             'distance': [],
             'epsilon': [],
-            'loss': []
+            'loss': [],
+            'success_rate': []
         }
 
         self._dual_projection_mid_points = {
@@ -294,8 +295,9 @@ class FMN:
             self.attack_data['loss'].append(loss.mean().item())
             self.attack_data['distance'].append(_distance)
             self.attack_data['epsilon'].append(_epsilon)
-
-            print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
-            print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
+            self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) * 100 / batch_size)
+            if i == self.steps-1:
+                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
+                print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
 
         return init_trackers['best_adv'], best_distance

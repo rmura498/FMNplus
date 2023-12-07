@@ -17,7 +17,44 @@ from Attacks.fmn_base_vec import FMN as FMNVec
 from Attacks.fmn_base import FMN as FMNBase
 from Utils.load_model import load_data
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from autoattack.autoattack import AutoAttack
+
+
+parser = argparse.ArgumentParser(description="Perform multiple attacks using FMN and AA.")
+
+parser.add_argument('--batch_size', type=int, default=10, help='Batch size')
+parser.add_argument('--num_batches', type=int, default=1, help='Number of batches')
+parser.add_argument('--steps', type=int, default=30, help='Number of steps')
+parser.add_argument('--epsilon', type=float, default=8/255, help='Epsilon value, None for dynamic one')
+parser.add_argument('--loss', type=str, default='CE', choices=['CE', 'DLR'], help='Loss function')
+parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD'], help='Optimizer')
+parser.add_argument('--scheduler', type=str, default='RLROP', choices=['RLROP', 'CALR'], help='Scheduler')
+parser.add_argument('--norm', type=float, default=float('inf'), help='Norm value')
+parser.add_argument('--model_id', type=int, default=8, help='Model ID')
+parser.add_argument('--shuffle', type=bool, default=True, help='Shuffle data')
+parser.add_argument('--attack_type', type=str, default='FMNBase', choices=['FMNBase', 'FMNVec', 'AA'], help='Type of attack')
+parser.add_argument('--cuda_device', type=int, default=0, help='Cuda device to use (cuda:0, cuda:1) - int')
+
+
+def configure_autoattack(model, steps, loss='CE'):
+    _attacks = {
+        'CE': ('apgd-ce',),
+        'DLR': ('apgd-dlr',)
+    }
+
+    adversary = AutoAttack(
+        model,
+        norm='Linf',
+        eps=8/255,
+        version='standard',
+        device=device,
+        verbose=True
+    )
+    adversary.attacks_to_run = _attacks[loss]
+    adversary.apgd.n_restarts = 1
+    adversary.apgd.n_iter = steps
+
+    return adversary
 
 
 def main(
@@ -54,33 +91,29 @@ def main(
         shuffle=shuffle
     )
 
-    # Instantiating FMN vec
-    fmn_vec = FMNVec(
-        model,
-        steps=steps,
-        loss=loss,
-        device=device,
-        epsilon=epsilon,
-        optimizer=optimizer,
-        norm=norm,
-        alpha_init=alpha_init,
-        alpha_final=alpha_final,
-        verbose=verbose
-    )
-
-    fmn_base = FMNBase(
-        model,
-        steps=steps,
-        loss=loss,
-        device=device,
-        epsilon=epsilon,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        norm=norm,
-        alpha_init=alpha_init,
-        alpha_final=alpha_final,
-        verbose=verbose
-    )
+    if attack_type == 'AA':
+        attack = configure_autoattack(model, steps, loss)
+    elif attack_type == 'FMNVec':
+        attack = FMNVec(
+            model=model,
+            steps=steps,
+            loss=loss,
+            device=device,
+            epsilon=epsilon,
+            optimizer=optimizer,
+            norm=norm
+        )
+    else:
+        attack = FMNBase(
+            model=model,
+            steps=steps,
+            loss=loss,
+            device=device,
+            epsilon=epsilon,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            norm=norm
+        )
 
     for i, (samples, labels) in enumerate(dataloader):
         print(f"Cleaning misclassified on batch {i}")
@@ -91,50 +124,34 @@ def main(
         samples = samples[correctly_classified_samples]
         labels = labels[correctly_classified_samples]
 
-        print("\n\nRunning FMN vec\n")
-        _, _ = fmn_vec.forward(samples, labels)
-        print("\n\nRunning FMN base\n")
-        _, _ = fmn_base.forward(samples, labels)
+        # retrieving only requested batch size
+        samples = samples[:batch_size]
+        labels = labels[:batch_size]
+
+        print(f"Running attack on batch {i}")
+        if 'AA' in attack_type:
+            attack.run_standard_evaluation(samples, labels, bs=batch_size)
+            loss_data = attack.apgd.loss_total
+            sr_data = attack.success_rate
+        else:
+            attack.forward(images=samples, labels=labels)
+            loss_data = attack.attack_data['loss']
+            sr_data = attack.attack_data['success_rate']
+
+        attack_data = {
+            'loss': loss_data,
+            'success_rate': sr_data
+        }
+
+        # Saving data
+        print(f"Saving attack data on batch {i}")
+        filename = (f"{formatted_date}"
+                    f"_{optimizer}_steps{steps}_batch{batch_size}.pkl")
+
+        with open(os.path.join(exp_path, filename), 'wb') as file:
+            pickle.dump(attack_data, file)
 
         if i+1 == num_batches: break
-
-    # loss_fmn_base = torch.tensor(loss_fmn_base).unsqueeze(0).mean(dim=1).squeeze(0).tolist()
-    loss_fmn_base = fmn_base.attack_data['loss']
-    loss_data = {
-        'loss_fmn_base': loss_fmn_base,
-        'loss_fmn_vec': fmn_vec.attack_data['loss']
-    }
-
-    print(f"\nFMN Base loss:\n{loss_fmn_base}")
-    print(f"FMN Vec loss:\n{fmn_vec.attack_data['loss']}")
-
-    epsilon_name = "8-255" if epsilon == 8/255 else "None"
-    current_date = datetime.now()
-    formatted_date = current_date.strftime("%d%m%y")
-
-    exp_path = os.path.join("SchedulerVecExps", formatted_date)
-    if not os.path.exists(exp_path):
-        os.makedirs(exp_path)
-    filename = os.path.join(exp_path, f"FMN_vecVsBase_lossData_{optimizer}_steps{steps}"
-                                      f"_batch{batch_size}_eps_{epsilon_name}.pkl")
-
-    with open(filename, 'wb') as file:
-        pickle.dump(loss_data, file)
-
-    if plot:
-        # plot losses
-        fig, ax = plt.subplots(figsize=(4, 4))
-
-        steps_x = np.arange(0, steps)
-        ax.plot(steps_x, loss_fmn_base, label='FMN Base loss')
-        ax.plot(steps_x, fmn_vec.attack_data['loss'], label='FMN Vec loss', linestyle='dotted')
-
-        ax.grid()
-        ax.legend()
-
-        fig_path = os.path.join(exp_path, f"SchedulerVecExps/FMN_vecVsBase_lossData"
-                                          f"_{optimizer}_steps{steps}_batch{batch_size}_eps_{epsilon_name}.pdf")
-        fig.savefig(fig_path)
 
 
 if __name__ == '__main__':
