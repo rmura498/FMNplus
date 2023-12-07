@@ -49,7 +49,8 @@ class FMN:
                  optimizer='SGD',
                  scheduler='CALR',
                  gradient_strategy='Normalization',
-                 initialization_strategy='Standard'
+                 initialization_strategy='Standard',
+                 verbose=False
                  ):
         self.model = model
         self.norm = norm
@@ -94,6 +95,8 @@ class FMN:
         self.optimizer = optimizers[optimizer]
         self.scheduler = schedulers[scheduler]
         self.scheduler_name = scheduler
+
+        self.verbose = verbose
 
     def _gradient_update(self, delta_grad, batch_view, step_size):
 
@@ -184,8 +187,10 @@ class FMN:
         optimizer = self.optimizer([delta], lr=self.alpha_init)
         if self.scheduler_name == 'CALR':
             scheduler = self.scheduler(optimizer, T_max=self.steps)
-        else:
+        elif self.scheduler_name == 'RLROP':
             scheduler = self.scheduler(optimizer, factor=0.5)
+        else:
+            scheduler = self.scheduler(optimizer)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
@@ -289,8 +294,7 @@ class FMN:
             self.attack_data['distance'].append(_distance)
             self.attack_data['epsilon'].append(_epsilon)
 
-            if i == self.steps - 1:
-                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size}% ")
-                print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
+            print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
+            print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
 
         return init_trackers['best_adv'], best_distance
