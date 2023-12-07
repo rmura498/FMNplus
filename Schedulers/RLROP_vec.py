@@ -27,7 +27,7 @@ class ReduceLROnPlateau:
             each update. Default: ``False``.
     """
 
-    def __init__(self, batch_size, factor=0.5, patience=10, threshold=1e-4,
+    def __init__(self, batch_size, factor=0.5, patience=5, threshold=1e-4,
                  min_step=0, eps=1e-8, verbose=False):
 
         if factor >= 1.0:
@@ -61,9 +61,15 @@ class ReduceLROnPlateau:
             self.num_bad_epochs+1
         )
         patience_expired = self.num_bad_epochs > self.patience
+        self.num_bad_epochs = torch.where(
+            patience_expired,
+            0.0,
+            self.num_bad_epochs
+        )
 
-        print(f"Num bad epochs :\{self.num_bad_epochs}")
-        print(f"Patience expired :\{patience_expired}")
+        if self.verbose:
+            print(f"Num bad epochs:\n{self.num_bad_epochs}")
+            print(f"Patience expired:\n{patience_expired}")
 
         new_steps = torch.maximum(steps * self.factor, self.min_steps)
         steps_improved = (steps - new_steps > self.eps)
@@ -74,9 +80,12 @@ class ReduceLROnPlateau:
             steps
         )
 
+        if self.verbose:
+            print(f"Current steps:\n{steps}")
+
         return steps
 
     def is_better(self, cur_loss, best_loss):
         rel_epsilon = 1. - self.threshold
-        return cur_loss < best_loss * rel_epsilon
+        return cur_loss < best_loss
 
