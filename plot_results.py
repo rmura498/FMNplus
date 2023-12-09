@@ -55,11 +55,14 @@ def read_results(filenames=[], attack_type='FMNBase', sign=-1):
 
     else:
         loss = torch.tensor(loss_list[-1])
-        loss = loss.reshape(3, 100)
-        mean_loss = torch.mean(loss, dim=0)
         sr = torch.tensor(sr_list[-1])
-        sr = sr.reshape(3,100)
-        mean_sr = torch.mean(sr, dim=0)
+        mean_loss = loss
+        mean_sr = sr
+        if len(loss) == 300:
+            loss = loss.reshape(3, 100)
+            sr = sr.reshape(3, 100)
+            mean_loss = torch.mean(loss, dim=0)
+            mean_sr = torch.mean(sr, dim=0)
 
     return mean_sr, mean_loss
 
@@ -84,6 +87,8 @@ def plot_model_results(model_id='1'):
         if attack_type != 'AA':
             optAdam = [exp for exp in pickle_files if exp.split('_')[0] == 'optAdam']
             optSGD = [exp for exp in pickle_files if exp.split('_')[0] == 'optSGD']
+            if optAdam == [] or optSGD == []:
+                continue
 
             mean_sr, mean_loss = read_results([path + file for file in optAdam], attack_type)
             loss = mean_loss.numpy()
@@ -110,6 +115,10 @@ def plot_model_results(model_id='1'):
         if attack_type != 'AA':
             optAdam = [exp for exp in pickle_files if exp.split('_')[0] == 'optAdam']
             optSGD = [exp for exp in pickle_files if exp.split('_')[0] == 'optSGD']
+            print(optAdam)
+            if optAdam == [] or optSGD == []:
+                print('sono qui')
+                continue
 
             mean_sr, mean_loss = read_results([path + file for file in optAdam], attack_type)
             loss = mean_loss.numpy()
@@ -138,5 +147,4 @@ def plot_model_results(model_id='1'):
 
     plt.show()
 
-
-plot_model_results(model_id='4')
+plot_model_results(model_id='1')
