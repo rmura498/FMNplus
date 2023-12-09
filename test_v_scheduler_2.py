@@ -6,7 +6,7 @@ Testing multiple FMN configuration against AutoAttack
 
 '''
 
-import os, pickle, argparse
+import os, pickle, argparse, time
 from datetime import datetime
 
 import torch
@@ -118,6 +118,8 @@ def main(
     for i, (samples, labels) in enumerate(dataloader):
         print(f"Cleaning misclassified on batch {i}")
         # clean misclassified
+        samples.to(device)
+        labels.to(device)
         logits = model(samples)
         pred_labels = logits.argmax(dim=1)
         correctly_classified_samples = pred_labels == labels
@@ -172,7 +174,6 @@ if __name__ == '__main__':
     cuda_device = int(args.cuda_device)
 
     device = torch.device(f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu")
-    torch.manual_seed('42')
 
     main(
         batch_size=batch_size,

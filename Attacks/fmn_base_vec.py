@@ -218,7 +218,7 @@ class FMN:
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
 
-        scheduler_vec = RLROPvec(batch_size=batch_size, verbose=self.verbose)
+        scheduler_vec = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
         steps = torch.ones(batch_size) * self.alpha_init
 
         for i in range(self.steps):
