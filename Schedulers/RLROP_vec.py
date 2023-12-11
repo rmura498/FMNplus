@@ -27,7 +27,7 @@ class ReduceLROnPlateau:
             each update. Default: ``False``.
     """
 
-    def __init__(self, batch_size, factor=0.5, patience=5, threshold=1e-4,
+    def __init__(self, batch_size, factor=0.5, patience=10, threshold=1e-4,
                  min_step=0, eps=1e-8, verbose=False, device='cpu'):
 
         if factor >= 1.0:
@@ -87,5 +87,5 @@ class ReduceLROnPlateau:
 
     def is_better(self, cur_loss, best_loss):
         rel_epsilon = 1. - self.threshold
-        return cur_loss < best_loss
+        return cur_loss < best_loss * rel_epsilon
 
