@@ -296,12 +296,12 @@ class FMN:
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
 
             self.attack_data['loss'].append(loss.detach().clone().cpu().mean().item())
-            self.attack_data['distance'].append(_distance)
-            self.attack_data['epsilon'].append(_epsilon)
+            self.attack_data['distance'].append(_distance.cpu())
+            self.attack_data['epsilon'].append(_epsilon.cpu())
             self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) * 100 / batch_size)
             if i == self.steps-1:
                 print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
-                self.attack_data['is_adv'].append(is_adv)
+                self.attack_data['is_adv'].append(is_adv.cpu())
 
         return init_trackers['best_adv'], best_distance
