@@ -83,7 +83,8 @@ class FMN:
             'distance': [],
             'epsilon': [],
             'loss': [],
-            'success_rate': []
+            'success_rate': [],
+            'is_adv': []
         }
 
         self._dual_projection_mid_points = {
@@ -134,7 +135,7 @@ class FMN:
 
         if self.initialization_strategy == 'Random':
             delta = torch.rand(images.shape)
-            delta = delta.clamp(0, 8/255)
+            delta.clamp_(0, epsilon)
 
         return epsilon, delta, is_adv
 
@@ -188,14 +189,16 @@ class FMN:
 
         optimizer = self.optimizer([delta], lr=self.alpha_init)
         if self.scheduler_name == 'CALR':
-            scheduler = self.scheduler(optimizer, T_max=self.steps)
+            scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
         elif self.scheduler_name == 'RLROP':
             scheduler = self.scheduler(optimizer, factor=0.5)
         else:
-            scheduler = self.scheduler(optimizer)
+            scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
+            epsilon = epsilon.to(self.device)
+        delta = delta.to(self.device)
 
         for i in range(self.steps):
             optimizer.zero_grad()
@@ -292,12 +295,13 @@ class FMN:
             _epsilon = epsilon.clone()
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
 
-            self.attack_data['loss'].append(loss.mean().item())
-            self.attack_data['distance'].append(_distance)
-            self.attack_data['epsilon'].append(_epsilon)
+            self.attack_data['loss'].append(loss.detach().clone().cpu().mean().item())
+            self.attack_data['distance'].append(_distance.cpu())
+            self.attack_data['epsilon'].append(_epsilon.cpu())
             self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) * 100 / batch_size)
             if i == self.steps-1:
                 print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
+                self.attack_data['is_adv'].append(is_adv.cpu())
 
         return init_trackers['best_adv'], best_distance

@@ -443,7 +443,7 @@ class APGDAttack():
         #
 
         # self.loss_total = loss_steps.sum(dim=1)
-        self.loss_total = loss_steps.mean(dim=1)
+        self.loss_total = loss_steps.detach().clone().cpu().mean(dim=1)
         return (x_best, acc, loss_best, x_best_adv)
 
     def perturb(self, x, y=None, best_loss=False, x_init=None):

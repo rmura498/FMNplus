@@ -39,7 +39,7 @@ class ReduceLROnPlateau:
         self.batch_size = batch_size
 
         self.min_steps = torch.ones(batch_size).to(device) * min_step
-        self.patience = torch.ones(batch_size).to(device) * patience
+        self.patience =  patience
         self.threshold = threshold
         self.best = None
         self.num_bad_epochs = torch.zeros(batch_size).to(device)
