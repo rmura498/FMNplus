@@ -8,6 +8,8 @@ from torch import Tensor
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
+from torch_optimizer import RAdam, QHAdam
+
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
 from Utils.loss import difference_of_logits, dlr_loss
@@ -52,7 +54,8 @@ class FMN:
                  scheduler='CALR',
                  gradient_strategy='Normalization',
                  initialization_strategy='Standard',
-                 verbose=False
+                 verbose=False,
+                 extra_iters=False
                  ):
         self.model = model
         self.norm = norm
@@ -68,12 +71,15 @@ class FMN:
         self.loss = loss
         self.gradient_strategy = gradient_strategy
         self.initialization_strategy = initialization_strategy
+        self.extra_iters = extra_iters
 
         self.epsilon = epsilon
 
         optimizers = {
             'SGD': SGD,
-            'Adam': Adam
+            'Adam': Adam,
+            'RAdam': RAdam,
+            'QHAdam': QHAdam
         }
 
         schedulers = {
@@ -86,7 +92,8 @@ class FMN:
             'epsilon': [],
             'loss': [],
             'success_rate': [],
-            'is_adv': []
+            'is_adv': None,
+            'steps': []
         }
 
         self._dual_projection_mid_points = {
@@ -114,6 +121,8 @@ class FMN:
             # delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
             _, projection, _ = self._dual_projection_mid_points[float('inf')]
             projection(delta=delta_grad, epsilon=step_size)
+        elif self.gradient_strategy == 'Sign':
+            delta_grad = torch.sign(delta_grad)
 
         return delta_grad
 
@@ -187,14 +196,9 @@ class FMN:
 
         multiplier = 1 if self.targeted else -1
         delta.requires_grad_(True)
+        delta = delta.to(self.device)
 
         optimizer = self.optimizer([delta], lr=self.alpha_init)
-        '''
-        if self.scheduler_name == 'CALR':
-            scheduler = self.scheduler(optimizer, T_max=self.steps)
-        else:
-            scheduler = self.scheduler(optimizer, factor=0.5)
-        '''
 
         logits = self.model(adv_images)
         labels_infhot = torch.zeros_like(logits).scatter_(
@@ -219,11 +223,38 @@ class FMN:
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
             epsilon = epsilon.to(self.device)
-        delta = delta.to(self.device)
 
         scheduler_vec = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
         steps = torch.ones(batch_size) * self.alpha_init
         steps = steps.to(self.device)
+
+        if self.extra_iters:
+            extra_iters = 5
+            for i in range(extra_iters):
+                optimizer.zero_grad()
+
+                adv_images = images + delta
+                adv_images = adv_images.to(self.device)
+
+                logits = self.model(adv_images)
+
+                t_loss = loss(logits, labels)
+                v_loss = torch.dot(t_loss, steps)
+                v_loss.backward()
+
+                delta.grad.data = torch.sign(delta.grad.data)
+
+                optimizer.step()
+                steps = scheduler_vec.step(t_loss, steps)
+
+                # project in place
+                projection(delta=delta.data, epsilon=epsilon)
+                # clamp
+                delta.data.add_(images).clamp_(min=0, max=1).sub_(images)
+
+                # print(f"Gradients of delta:\n{delta.grad.data}")
+
+            delta.grad.data = delta.grad.data / extra_iters
 
         for i in range(self.steps):
             optimizer.zero_grad()
@@ -270,6 +301,7 @@ class FMN:
                                           )
 
             t_loss = loss(logits, labels)
+
             if self.verbose:
                 print(f"loss mean[{i}]:\n{t_loss.mean()}")
                 print(f"steps[{i}]:\n{steps}")
@@ -299,15 +331,16 @@ class FMN:
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
 
             # self.attack_data['loss'].append(loss.sum().item())
-            self.attack_data['loss'].append(t_loss.detach().clone().cpu().mean().item())
+            self.attack_data['loss'].append((t_loss).detach().clone().cpu().mean().item())
             self.attack_data['distance'].append(_distance.cpu())
             self.attack_data['epsilon'].append(_epsilon.cpu())
             self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) * 100 / batch_size)
+            self.attack_data['steps'].append(steps.detach().clone())
 
             if i == self.steps-1:
                 print(f"SUCCESS RATE: : {len(is_adv[is_adv == True])*100/batch_size:.2f}% ")
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
-                self.attack_data['is_adv'].append(is_adv.cpu())
+                self.attack_data['is_adv'] = is_adv.cpu()
 
 
         return init_trackers['best_adv'], best_distance
