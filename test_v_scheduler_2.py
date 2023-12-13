@@ -146,7 +146,7 @@ def main(
             adv = attack.run_standard_evaluation(samples, labels, bs=batch_size)
             loss_data = attack.apgd.loss_total
             sr_data = attack.success_rate
-            learning_rates = attack.steps
+            learning_rates = attack.apgd.steps
 
             # compute is adv for AA
             logits = model(adv)
