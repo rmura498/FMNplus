@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.optim import SGD, Adam
+from torch_optimizer import RAdam, QHAdam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
@@ -71,7 +72,9 @@ class FMN:
 
         optimizers = {
             'SGD': SGD,
-            'Adam': Adam
+            'Adam': Adam,
+            'RAdam': RAdam,
+            'QHAdam': QHAdam
         }
 
         schedulers = {
@@ -84,7 +87,8 @@ class FMN:
             'epsilon': [],
             'loss': [],
             'success_rate': [],
-            'is_adv': []
+            'is_adv': None,
+            'steps': []
         }
 
         self._dual_projection_mid_points = {
@@ -94,9 +98,14 @@ class FMN:
             float('inf'): (1, linf_projection, linf_mid_points),
         }
 
-        self.optimizer = optimizers[optimizer]
-        self.scheduler = schedulers[scheduler]
         self.scheduler_name = scheduler
+        self.optimizer_name = optimizer
+
+        self.optimizer = optimizers[self.optimizer_name]
+        self.scheduler = None
+
+        if self.scheduler_name != 'None':
+            self.scheduler = schedulers[self.scheduler_name]
 
         self.verbose = verbose
 
@@ -106,11 +115,14 @@ class FMN:
             # normalize gradient
             grad_norms = delta_grad.flatten(1).norm(p=float('inf'), dim=1).clamp_(min=1e-12)
             delta_grad.div_(batch_view(grad_norms))
-
         elif self.gradient_strategy == 'Projection':
-            oned_delta = torch.linalg.norm(delta_grad.data.flatten(1), dim=1, ord=self.norm)
-            dot_product = torch.dot(oned_delta, torch.ones_like(oned_delta) * step_size)
-            delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
+            # oned_delta = torch.linalg.norm(delta_grad.data.flatten(1), dim=1, ord=self.norm)
+            # dot_product = torch.dot(oned_delta, torch.ones_like(oned_delta) * step_size)
+            # delta_grad = dot_product / torch.norm(delta_grad, p=self.norm) ** 2 * delta_grad
+            _, projection, _ = self._dual_projection_mid_points[float('inf')]
+            projection(delta=delta_grad, epsilon=step_size)
+        elif self.gradient_strategy == 'Sign':
+            delta_grad = torch.sign(delta_grad)
 
         return delta_grad
 
@@ -135,7 +147,7 @@ class FMN:
 
         if self.initialization_strategy == 'Random':
             delta = torch.rand(images.shape)
-            delta.clamp_(0, epsilon)
+            delta.clamp_(0, 8/255)
 
         return epsilon, delta, is_adv
 
@@ -186,19 +198,21 @@ class FMN:
 
         multiplier = 1 if self.targeted else -1
         delta.requires_grad_(True)
+        delta = delta.to(self.device)
 
         optimizer = self.optimizer([delta], lr=self.alpha_init)
-        if self.scheduler_name == 'CALR':
-            scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
-        elif self.scheduler_name == 'RLROP':
-            scheduler = self.scheduler(optimizer, factor=0.5)
-        else:
-            scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
+
+        if self.scheduler is not None:
+            if self.scheduler_name == 'CALR':
+                scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
+            elif self.scheduler_name == 'RLROP':
+                scheduler = self.scheduler(optimizer, factor=0.5, patience=2)
+            else:
+                scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
             epsilon = epsilon.to(self.device)
-        delta = delta.to(self.device)
 
         for i in range(self.steps):
             optimizer.zero_grad()
@@ -250,6 +264,9 @@ class FMN:
             init_trackers['best_norm'] = torch.where(is_both, delta_norm, init_trackers['best_norm'])
             init_trackers['best_adv'] = torch.where(batch_view(is_both), adv_images.detach(),
                                                     init_trackers['best_adv'])
+
+            print(f"LR: {optimizer.param_groups[0]['lr']}")
+
             if self.epsilon is None:
                 if self.norm == 0:
                     epsilon = torch.where(is_adv,
@@ -287,10 +304,11 @@ class FMN:
             best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
                                               dim=1, ord=self.norm)
 
-            if self.scheduler_name == 'RLROP':
-                scheduler.step(loss.sum())
-            else:
-                scheduler.step()
+            if self.scheduler is not None:
+                if self.scheduler_name == 'RLROP':
+                    scheduler.step(loss.mean())
+                else:
+                    scheduler.step()
 
             _epsilon = epsilon.clone()
             _distance = torch.linalg.norm((adv_images - images).data.flatten(1), dim=1, ord=self.norm)
@@ -299,9 +317,11 @@ class FMN:
             self.attack_data['distance'].append(_distance.cpu())
             self.attack_data['epsilon'].append(_epsilon.cpu())
             self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) * 100 / batch_size)
+            self.attack_data['steps'].append(optimizer.param_groups[0]['lr'])
+
             if i == self.steps-1:
                 print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
-                self.attack_data['is_adv'].append(is_adv.cpu())
+                self.attack_data['is_adv'] = is_adv.cpu()
 
         return init_trackers['best_adv'], best_distance
