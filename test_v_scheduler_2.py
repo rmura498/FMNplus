@@ -87,7 +87,8 @@ def main(
 
     # loading model and dataset
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
-    model.eval().to(device)
+    model.eval()
+    model = model.to(device)
 
     _bs = batch_size + 500
     dataloader = DataLoader(
@@ -128,8 +129,8 @@ def main(
     for i, (samples, labels) in enumerate(dataloader):
         print(f"Cleaning misclassified on batch {i}")
         # clean misclassified
-        samples.to(device)
-        labels.to(device)
+        samples = samples.to(device)
+        labels = labels.to(device)
         logits = model(samples)
         pred_labels = logits.argmax(dim=1)
         correctly_classified_samples = pred_labels == labels
