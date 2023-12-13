@@ -146,6 +146,7 @@ class APGDAttack():
         self.y_target = None
         self.logger = logger
         self.loss_total = []
+        self.steps = None
 
         assert self.norm in ['Linf', 'L2', 'L1']
         assert not self.eps is None
@@ -164,6 +165,7 @@ class APGDAttack():
         if self.seed is None:
             self.seed = time.time()
 
+    # loss_steps, i, k, loss_best, k3=self.thr_decr
     def check_oscillation(self, x, j, k, y5, k3=0.75):
         t = torch.zeros(x.shape[1]).to(self.device)
         for counter5 in range(k):
@@ -227,7 +229,6 @@ class APGDAttack():
         x_best = x_adv.clone()
         x_best_adv = x_adv.clone()
 
-        # qui forse c'è la loss originale
         loss_steps = torch.zeros([self.n_iter, x.shape[0]]
             ).to(self.device)
         loss_best_steps = torch.zeros([self.n_iter + 1, x.shape[0]]
@@ -307,7 +308,7 @@ class APGDAttack():
             #print(topk[0], sp_old[0])
             adasp_redstep = 1.5
             adasp_minstep = 10.
-            #print(step_size[0].item())
+            # print(f"AA LR: {step_size[0].item()}")
         counter3 = 0
 
         loss_best_last_check = loss_best.clone()
@@ -317,6 +318,8 @@ class APGDAttack():
         u = torch.arange(x.shape[0], device=self.device)
 
         grad = grad*0
+        #step_size = alpha * torch.ones([x.shape[0], *(
+        #        [1] * self.ndims)]).to(self.device).detach()
         for i in range(self.n_iter):
             ### gradient step
             with torch.no_grad():
@@ -356,8 +359,13 @@ class APGDAttack():
                     delta_p = L1_projection(x, delta_u, self.eps)
                     x_adv_1 = x + delta_u + delta_p
                     
-                    
+
                 x_adv = x_adv_1 + 0.
+            # print(f"AA LR:\n{step_size}")
+            if self.steps is None:
+                self.steps = []
+            self.steps.append(step_size.detach().clone().cpu())
+
 
             ### get gradient
             x_adv.requires_grad_()
@@ -404,6 +412,7 @@ class APGDAttack():
 
               counter3 += 1
 
+              print(f"AA k is: {k}")
               if counter3 == k:
                   if self.norm in ['Linf', 'L2']:
                       fl_oscillation = self.check_oscillation(loss_steps, i, k,
@@ -414,7 +423,7 @@ class APGDAttack():
                           fl_reduce_no_impr)
                       reduced_last_check = fl_oscillation.clone()
                       loss_best_last_check = loss_best.clone()
-    
+
                       if fl_oscillation.sum() > 0:
                           ind_fl_osc = (fl_oscillation > 0).nonzero().squeeze()
                           step_size[ind_fl_osc] /= 2.0
@@ -440,7 +449,7 @@ class APGDAttack():
                   counter3 = 0
                   #k = max(k - self.size_decr, self.n_iter_min)
 
-        #
+        # termina iterazioni principali
 
         # self.loss_total = loss_steps.sum(dim=1)
         self.loss_total = loss_steps.detach().clone().cpu().mean(dim=1)
