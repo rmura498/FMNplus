@@ -27,7 +27,7 @@ class ReduceLROnPlateau:
             each update. Default: ``False``.
     """
 
-    def __init__(self, batch_size, factor=0.5, patience=10, threshold=1e-4,
+    def __init__(self, batch_size, factor=0.5, patience=2, threshold=1e-4,
                  min_step=0, eps=1e-8, verbose=False, device='cpu'):
 
         if factor >= 1.0:
@@ -74,6 +74,7 @@ class ReduceLROnPlateau:
         new_steps = torch.maximum(steps * self.factor, self.min_steps)
         steps_improved = (steps - new_steps > self.eps)
         patience_exp_and_is_better = patience_expired & steps_improved
+        # patience_exp_and_is_better = patience_expired
         steps = torch.where(
             patience_exp_and_is_better,
             new_steps,
