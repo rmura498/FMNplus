@@ -185,7 +185,6 @@ class AutoAttack():
                         # apgd on cross-entropy loss
                         self.apgd.loss = 'ce'
                         self.apgd.seed = self.get_seed()
-                        self.apgd.verbose = True
                         adv_curr = self.apgd.perturb(x, y) #cheap=True
                     
                     elif attack == 'apgd-dlr':

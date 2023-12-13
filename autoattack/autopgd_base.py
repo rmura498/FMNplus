@@ -412,7 +412,7 @@ class APGDAttack():
 
               counter3 += 1
 
-              print(f"AA k is: {k}")
+              # print(f"AA k is: {k}")
               if counter3 == k:
                   if self.norm in ['Linf', 'L2']:
                       fl_oscillation = self.check_oscillation(loss_steps, i, k,
