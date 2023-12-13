@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$#" -ne 5 ]; then
+if [ "$#" -ne 6 ]; then
     echo "Usage: $0 <steps> <batch_size> <batches> <cuda_device> <model_id> <alpha_init>"
     exit 1
 fi
