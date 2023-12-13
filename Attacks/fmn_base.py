@@ -265,7 +265,8 @@ class FMN:
             init_trackers['best_adv'] = torch.where(batch_view(is_both), adv_images.detach(),
                                                     init_trackers['best_adv'])
 
-            print(f"LR: {optimizer.param_groups[0]['lr']}")
+            if self.verbose:
+                print(f"LR: {optimizer.param_groups[0]['lr']}")
 
             if self.epsilon is None:
                 if self.norm == 0:
