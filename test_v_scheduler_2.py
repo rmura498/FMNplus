@@ -146,7 +146,7 @@ def main(
             adv = attack.run_standard_evaluation(samples, labels, bs=batch_size)
             loss_data = attack.apgd.loss_total
             sr_data = attack.success_rate
-            steps = attack.steps
+            learning_rates = attack.steps
 
             # compute is adv for AA
             logits = model(adv)
@@ -158,13 +158,13 @@ def main(
             loss_data = attack.attack_data['loss']
             sr_data = attack.attack_data['success_rate']
             is_adv = attack.attack_data['is_adv']
-            steps = attack.attack_data['steps']
+            learning_rates = attack.attack_data['steps']
 
         attack_data = {
             'loss': loss_data,
             'success_rate': sr_data,
             'is_adv': is_adv,
-            'steps': steps
+            'steps': learning_rates
         }
 
         # Saving data
