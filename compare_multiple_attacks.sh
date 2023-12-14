@@ -20,25 +20,45 @@ python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batc
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
             --attack_type FMNBase --optimizer Adam --scheduler RLROP --loss LL --shuffle False --alpha_init $6
 
-echo "### Running FMN vec x8 Versions ... ###"
+echo "### Running FMN vec RLROPVec x8 Versions ... ###"
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer SGD --loss CE --shuffle False --alpha_init $6
+            --attack_type FMNVec --scheduler RLROPVec --optimizer SGD --loss CE --shuffle False --alpha_init $6
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer SGD --loss DLR --shuffle False --alpha_init $6
+            --attack_type FMNVec --scheduler RLROPVec --optimizer SGD --loss DLR --shuffle False --alpha_init $6
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer Adam --loss CE --shuffle False --alpha_init $6
+            --attack_type FMNVec --scheduler RLROPVec --optimizer Adam --loss CE --shuffle False --alpha_init $6
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer Adam --loss DLR --shuffle False --alpha_init $6
+            --attack_type FMNVec --scheduler RLROPVec --optimizer Adam --loss DLR --shuffle False --alpha_init $6
             
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer SGD --loss LL --shuffle False --alpha_init $6
+            --attack_type FMNVec --scheduler RLROPVec --optimizer SGD --loss LL --shuffle False --alpha_init $6
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer Adam --loss LL --shuffle False --alpha_init $6
+            --attack_type FMNVec --scheduler RLROPVec --optimizer Adam --loss LL --shuffle False --alpha_init $6
 
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer Adam --loss CE --shuffle False --alpha_init $6 --extra_iters True
+            --attack_type FMNVec --scheduler RLROPVec --optimizer Adam --loss CE --shuffle False --alpha_init $6 --extra_iters True
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
-            --attack_type FMNVec --optimizer Adam --loss DLR --shuffle False --alpha_init $6 --extra_iters True
+            --attack_type FMNVec --scheduler RLROPVec --optimizer Adam --loss DLR --shuffle False --alpha_init $6 --extra_iters True
+
+echo "### Running FMN vec x8 CALRVec Versions ... ###"
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer SGD --loss CE --shuffle False --alpha_init $6
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer SGD --loss DLR --shuffle False --alpha_init $6
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer Adam --loss CE --shuffle False --alpha_init $6
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer Adam --loss DLR --shuffle False --alpha_init $6
+
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer SGD --loss LL --shuffle False --alpha_init $6
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer Adam --loss LL --shuffle False --alpha_init $6
+
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer Adam --loss CE --shuffle False --alpha_init $6 --extra_iters True
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
+            --attack_type FMNVec --scheduler CALRVec --optimizer Adam --loss DLR --shuffle False --alpha_init $6 --extra_iters True
 
 echo "### Running FMN base (no scheduler) x4 Versions ... ###"
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
