@@ -8,13 +8,12 @@ from torch import Tensor
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
-from torch_optimizer import RAdam, QHAdam
-
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
 from Utils.loss import difference_of_logits, dlr_loss
 
 from Schedulers.RLROP_vec import ReduceLROnPlateau as RLROPvec
+from Schedulers.CALR_vec import VectorizedCosineAnnealing as CALRvec
 
 
 class FMN:
@@ -39,7 +38,7 @@ class FMN:
     def __init__(self,
                  model: nn.Module,
                  norm: float = float('inf'),
-                 epsilon = None,
+                 epsilon=None,
                  steps: int = 10,
                  alpha_init: float = 1.0,
                  alpha_final: Optional[float] = None,
@@ -78,13 +77,11 @@ class FMN:
         optimizers = {
             'SGD': SGD,
             'Adam': Adam,
-            'RAdam': RAdam,
-            'QHAdam': QHAdam
         }
 
         schedulers = {
-            'CALR': CosineAnnealingLR,
-            'RLROP': ReduceLROnPlateau
+            'CALRVec': CALRvec,
+            'RLROPVec': RLROPvec
         }
 
         self.attack_data = {
@@ -140,14 +137,14 @@ class FMN:
 
         if self.norm == 0:
             epsilon = torch.ones(batch_size,
-                                    device=self.device) if self.starting_points is None else \
-                                    delta.flatten(1).norm(p=0,dim=0)
+                                 device=self.device) if self.starting_points is None else \
+                delta.flatten(1).norm(p=0, dim=0)
         else:
             epsilon = torch.full((batch_size,), float('inf'), device=self.device)
 
         if self.initialization_strategy == 'Random':
             delta = torch.rand(images.shape)
-            delta = delta.clamp(0, 8/255)
+            delta = delta.clamp(0, 8 / 255)
 
         return epsilon, delta, is_adv
 
@@ -221,10 +218,15 @@ class FMN:
             loss = lambda logits, labels: -(multiplier * logit_diff_func(logits=logits))
 
         if self.epsilon is not None:
-            epsilon = torch.ones(1)*self.epsilon
+            epsilon = torch.ones(1) * self.epsilon
             epsilon = epsilon.to(self.device)
 
-        scheduler_vec = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
+        if self.scheduler_name == 'CALRVec':
+            scheduler_vec = CALRvec(batch_size=batch_size, verbose=self.verbose, device=self.device,
+                                    patience=3, total_iter=self.steps)
+        else:
+            scheduler_vec = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
+
         steps = torch.ones(batch_size) * self.alpha_init
         steps = steps.to(self.device)
 
@@ -292,7 +294,8 @@ class FMN:
                                           torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
                     epsilon.clamp_(min=0)
                 else:
-                    distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
+                    distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(
+                        min=1e-12)
                     epsilon = torch.where(is_adv,
                                           torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
                                           torch.where(init_trackers['adv_found'],
@@ -337,10 +340,9 @@ class FMN:
             self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) * 100 / batch_size)
             self.attack_data['steps'].append(steps.detach().clone())
 
-            if i == self.steps-1:
-                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True])*100/batch_size:.2f}% ")
+            if i == self.steps - 1:
+                print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
                 self.attack_data['is_adv'] = is_adv.cpu()
-
 
         return init_trackers['best_adv'], best_distance
