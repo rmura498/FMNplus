@@ -171,7 +171,7 @@ def main(
         # Saving data
         print(f"Saving attack data on batch {i}")
         filename = (f"{formatted_date}"
-                    f"_{optimizer}_{scheduler}_steps{steps}_batch{batch_size}.pkl")
+                    f"_{optimizer}_{scheduler}_steps{steps}_batch{batch_size}_extraiters{str(extra_iters)}.pkl")
 
         with open(os.path.join(exp_path, filename), 'wb') as file:
             pickle.dump(attack_data, file)
