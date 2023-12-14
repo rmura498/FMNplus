@@ -28,8 +28,10 @@ MODEL_DATASET = {
         },
     8: {'model_name': 'Gowal2021Improving_R18_ddpm_100m',
         'datasets': ['cifar10']
+        },
+    9: {'model_name': 'Rade2021Helper_R18_ddpm',
+        'datasets': ['cifar10']
         }
-
 }
 
 MODEL_NORMS = ["L0", "L1", "L2", "Linf"]
