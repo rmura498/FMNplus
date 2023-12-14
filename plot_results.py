@@ -49,10 +49,11 @@ def read_results(filenames=[], attack_type='FMNBase', sign=-1):
     if attack_type == 'AA':
         sr_list = [sr for sr in sr_list[-1]]
         sr_batch = torch.stack(sr_list, dim=0)
-        mean_sr = torch.mean(sr_batch, dim=0)
+        #mean_sr = torch.mean(sr_batch, dim=0)
+        mean_sr = sr_batch
         batch_loss = torch.stack(loss_list, dim=0)
-        mean_loss = torch.mean(batch_loss, dim=0)
-
+        #mean_loss = torch.mean(batch_loss, dim=0)
+        mean_loss = batch_loss.reshape(100)
     else:
         loss = torch.tensor(loss_list[-1])
         sr = torch.tensor(sr_list[-1])
@@ -68,13 +69,16 @@ def read_results(filenames=[], attack_type='FMNBase', sign=-1):
 
 
 def plot_model_results(model_id='1'):
-    attack_exps = os.listdir(f'results/081223_mid{model_id}')
-    filenames_DLR = [f'results/081223_mid{model_id}/' + filename for filename in attack_exps if
-                     filename.split('-')[-1] == 'lossDLR']
-    filenames_CE = [f'results/081223_mid{model_id}/' + filename for filename in attack_exps if
-                    filename.split('-')[-1] == 'lossCE']
+    attack_exps = os.listdir(f'Exps/13122314')
 
-    fig, (ax, ax1) = plt.subplots(1, 2, figsize=(12, 5))
+    filenames_DLR = [f'Exps/13122314/' + filename for filename in attack_exps if
+                     filename.split('-')[5] == 'lossDLR']
+    filenames_CE = [f'Exps/13122314/' + filename for filename in attack_exps if
+                    filename.split('-')[5] == 'lossCE']
+    filenames_LL = [f'Exps/13122314/' + filename for filename in attack_exps if
+                    filename.split('-')[5] == 'lossLL']
+
+    fig, (ax, ax1, ax2) = plt.subplots(1, 3, figsize=(15, 8))
 
     fig.suptitle(f'Model{model_id}')
     x = np.linspace(0, 100, 100)
@@ -85,26 +89,30 @@ def plot_model_results(model_id='1'):
         path = filename + '/'
 
         if attack_type != 'AA':
-            optAdam = [exp for exp in pickle_files if exp.split('_')[0] == 'optAdam']
-            optSGD = [exp for exp in pickle_files if exp.split('_')[0] == 'optSGD']
+            optAdam = [exp for exp in pickle_files if exp.split('_')[1] == 'Adam']
+            optSGD = [exp for exp in pickle_files if exp.split('_')[1] == 'SGD']
             if optAdam == [] or optSGD == []:
                 continue
 
-            mean_sr, mean_loss = read_results([path + file for file in optAdam], attack_type)
-            loss = mean_loss.numpy()
-            sr = mean_sr.numpy()
-            ax.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optAdam')
+            #mean_sr, mean_loss = read_results([path + file for file in optAdam], attack_type)
+            for filename in optAdam:
+                mean_sr, mean_loss = read_results([path + filename,], attack_type)
+                loss = mean_loss.numpy()
+                sr = mean_sr.numpy()
+                filename = filename.split('_')
+                ax.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optAdam-sch{filename[2]}')
 
-            mean_sr, mean_loss = read_results([path + file for file in optSGD], attack_type)
-            loss = mean_loss.numpy()
-            sr = mean_sr.numpy()
-            ax.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optSGD')
-
+            for filename in optSGD:
+                mean_sr, mean_loss = read_results([path + filename,], attack_type)
+                loss = mean_loss.numpy()
+                sr = mean_sr.numpy()
+                filename = filename.split('_')
+                ax.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optSGD-sch{filename[2]}')
         else:
             mean_sr, mean_loss = read_results([path + file for file in pickle_files], attack_type)
             loss = mean_loss.numpy()
             sr = mean_sr.numpy()
-            ax.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr)}')
+            ax.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[0])}')
 
     for filename in filenames_CE:
         pickle_files = os.listdir(filename)
@@ -113,28 +121,64 @@ def plot_model_results(model_id='1'):
         path = filename + '/'
 
         if attack_type != 'AA':
-            optAdam = [exp for exp in pickle_files if exp.split('_')[0] == 'optAdam']
-            optSGD = [exp for exp in pickle_files if exp.split('_')[0] == 'optSGD']
+            optAdam = [exp for exp in pickle_files if exp.split('_')[1] == 'Adam']
+
+            optSGD = [exp for exp in pickle_files if exp.split('_')[1] == 'SGD']
             print(optAdam)
             if optAdam == [] or optSGD == []:
-                print('sono qui')
                 continue
 
-            mean_sr, mean_loss = read_results([path + file for file in optAdam], attack_type)
-            loss = mean_loss.numpy()
-            sr = mean_sr.numpy()
-            ax1.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optAdam')
+            for filename in optAdam:
+                mean_sr, mean_loss = read_results([path + filename,], attack_type)
+                loss = mean_loss.numpy()
+                sr = mean_sr.numpy()
+                filename = filename.split('_')
+                ax1.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optAdam-sch{filename[2]}')
 
-            mean_sr, mean_loss = read_results([path + file for file in optSGD], attack_type)
-            loss = mean_loss.numpy()
-            sr = mean_sr.numpy()
-            ax1.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optSGD')
+            for filename in optSGD:
+                mean_sr, mean_loss = read_results([path + filename,], attack_type)
+                loss = mean_loss.numpy()
+                sr = mean_sr.numpy()
+                filename = filename.split('_')
+                ax1.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optSGD-sch{filename[2]}')
 
         else:
             mean_sr, mean_loss = read_results([path + file for file in pickle_files], attack_type)
             loss = mean_loss.numpy()
             sr = mean_sr.numpy()
-            ax1.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr)}')
+            ax1.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[0])}')
+
+    for filename in filenames_LL:
+        pickle_files = os.listdir(filename)
+        attack_type = filename.split('-')[0].split('/')[-1]
+        print(attack_type)
+        path = filename + '/'
+
+        if attack_type != 'AA':
+            optAdam = [exp for exp in pickle_files if exp.split('_')[1] == 'Adam']
+            optSGD = [exp for exp in pickle_files if exp.split('_')[1] == 'SGD']
+            if optAdam == [] or optSGD == []:
+                continue
+
+            for filename in optAdam:
+                mean_sr, mean_loss = read_results([path + filename,], attack_type)
+                loss = mean_loss.numpy()
+                sr = mean_sr.numpy()
+                filename = filename.split('_')
+                ax2.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optAdam-sch{filename[2]}')
+
+            for filename in optSGD:
+                mean_sr, mean_loss = read_results([path + filename,], attack_type)
+                loss = mean_loss.numpy()
+                sr = mean_sr.numpy()
+                filename = filename.split('_')
+                ax2.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[-1])}-optSGD-sch{filename[2]}')
+
+        else:
+            mean_sr, mean_loss = read_results([path + file for file in pickle_files], attack_type)
+            loss = mean_loss.numpy()
+            sr = mean_sr.numpy()
+            ax2.plot(x, loss, label=f'{attack_type}-SR:{"{:.3f}".format(sr[0])}')
 
     ax.set_xlabel('Steps')
     ax.set_ylabel('DLR Losses')
@@ -142,9 +186,13 @@ def plot_model_results(model_id='1'):
     ax1.set_xlabel('Steps')
     ax1.set_ylabel('CE Losses')
     ax1.legend()
+    ax2.set_xlabel('Steps')
+    ax2.set_ylabel('LL Losses')
+    ax2.legend()
 
     plt.savefig('output.pdf')
 
     plt.show()
 
-plot_model_results(model_id='1')
+
+plot_model_results(model_id='8')
