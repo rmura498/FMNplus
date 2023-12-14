@@ -28,7 +28,7 @@ parser.add_argument('--steps', type=int, default=30, help='Number of steps')
 parser.add_argument('--epsilon', type=float, default=8/255, help='Epsilon value, None for dynamic one')
 parser.add_argument('--loss', type=str, default='CE', choices=['CE', 'DLR', 'LL'], help='Loss function')
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD'], help='Optimizer')
-parser.add_argument('--scheduler', type=str, default='RLROP', choices=['RLROP', 'CALR', 'None'], help='Scheduler')
+parser.add_argument('--scheduler', type=str, default='RLROP', choices=['RLROPVec', 'CALRVec', 'RLROP', 'CALR', 'None'], help='Scheduler')
 parser.add_argument('--norm', type=float, default=float('inf'), help='Norm value')
 parser.add_argument('--model_id', type=int, default=8, help='Model ID')
 parser.add_argument('--shuffle', type=bool, default=True, help='Shuffle data')
@@ -79,11 +79,11 @@ def main(
     current_date = datetime.now()
     formatted_date = current_date.strftime("%d%m%y%H")
     epsilon_name = "8-255" if epsilon == 8 / 255 else "None"
-    exp_path = os.path.join("Exps", formatted_date, f"{attack_type}-eps{epsilon_name}"
-                                                    f"-bs{batch_size}-steps{steps}-loss{loss}--gradient{gradient_update}")
+    exp_path = os.path.join("Exps", f"{formatted_date}_mid{model_id}", f"{attack_type}-eps{epsilon_name}"
+                                                    f"-bs{batch_size}-steps{steps}-loss{loss}-gradient{gradient_update}")
 
     if not os.path.exists(exp_path):
-        os.makedirs(exp_path)
+        os.makedirs(exp_path, exist_ok=True)
 
     # loading model and dataset
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
@@ -107,6 +107,7 @@ def main(
             device=device,
             epsilon=epsilon,
             optimizer=optimizer,
+            scheduler=scheduler,
             norm=norm,
             alpha_init=alpha_init,
             gradient_strategy=gradient_update,
