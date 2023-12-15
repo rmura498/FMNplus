@@ -33,7 +33,7 @@ parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'S
 parser.add_argument('--scheduler', type=str, default='RLROP', choices=['RLROPVec', 'CALRVec', 'RLROP', 'CALR', 'None'], help='Scheduler')
 parser.add_argument('--norm', type=float, default=float('inf'), help='Norm value')
 parser.add_argument('--model_id', type=int, default=8, help='Model ID')
-parser.add_argument('--shuffle', type=bool, default=True, help='Shuffle data')
+parser.add_argument('--shuffle', type=bool, default=False, help='Shuffle data')
 parser.add_argument('--attack_type', type=str, default='FMNBase', choices=['FMNBase', 'FMNVec', 'AA'], help='Type of attack')
 parser.add_argument('--cuda_device', type=int, default=0, help='Cuda device to use (cuda:0, cuda:1) - int')
 parser.add_argument('--alpha_init', type=float, default=2, help='Alpha init (learning rate init)')
