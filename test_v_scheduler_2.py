@@ -19,6 +19,8 @@ from Utils.load_model import load_data
 
 from autoattack.autoattack import AutoAttack
 
+from config import EXP_DIRECTORY
+
 
 parser = argparse.ArgumentParser(description="Perform multiple attacks using FMN and AA.")
 
@@ -79,8 +81,7 @@ def main(
     current_date = datetime.now()
     formatted_date = current_date.strftime("%d%m%y%H")
     epsilon_name = "8-255" if epsilon == 8 / 255 else "None"
-    exp_path = os.path.join("Exps", f"{formatted_date}_mid{model_id}", f"{attack_type}-eps{epsilon_name}"
-                                                    f"-bs{batch_size}-steps{steps}-loss{loss}-gradient{gradient_update}")
+    exp_path = os.path.join(EXP_DIRECTORY, f"{formatted_date}_mid{model_id}")
 
     if not os.path.exists(exp_path):
         os.makedirs(exp_path, exist_ok=True)
@@ -170,8 +171,8 @@ def main(
 
         # Saving data
         print(f"Saving attack data on batch {i}")
-        filename = (f"{formatted_date}"
-                    f"_{optimizer}_{scheduler}_steps{steps}_batch{batch_size}_extraiters{str(extra_iters)}.pkl")
+        filename = (f"{formatted_date}_mid{model_id}_{attack_type}_{epsilon_name}_{batch_size}_{steps}_{optimizer}"
+                    f"_{scheduler}_{loss}_{gradient_update}_extraiters{str(extra_iters)}.pkl")
 
         with open(os.path.join(exp_path, filename), 'wb') as file:
             pickle.dump(attack_data, file)
