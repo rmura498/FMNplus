@@ -35,7 +35,7 @@ MODEL_DATASET = {
     10: {'model_name': 'Sehwag2021Proxy_R18',
         'datasets': ['cifar10']
         },
-    11: {'model_name': 'Rebuffi2021Fixing_R18_cutmix_ddpm',
+    11: {'model_name': 'Rebuffi2021Fixing_R18_ddpm',
         'datasets': ['cifar10']
         }
 }
