@@ -36,10 +36,11 @@ def main(model_folder=None):
         if config_name[10].replace('.pkl', '') == 'extraitersTrue':
             config_key = config_key + '-EI'
         if config_name[2] == 'AA':
-            aa_config_dict[config_key] =[is_adv, sr]
-        fmn_config_dict[config_key] = [is_adv, sr]
+            aa_config_dict[config_key] = [is_adv, sr]
+        else:
+            fmn_config_dict[config_key] = [is_adv, sr]
 
-    fmn_sr_matrix = np.zeros((len(fmn_config_dict.keys()), len(fmn_config_dict.keys())),)
+    fmn_sr_matrix = np.zeros((len(fmn_config_dict.keys()), len(fmn_config_dict.keys())), )
 
     for i, key_i in enumerate(fmn_config_dict):
         for j, key_j in enumerate(fmn_config_dict):
@@ -58,11 +59,19 @@ def main(model_folder=None):
                 unique_adv_index = np.unique(all_adv_index)
                 fmn_sr_matrix[i, j] = len(unique_adv_index) / batch_size * 100
 
-    print(fmn_sr_matrix)
-    df_cm = pd.DataFrame(fmn_sr_matrix, index=[i for i in fmn_config_dict.keys()],
-                         columns=[i for i in fmn_config_dict.keys()])
-    plt.figure(figsize=(32, 28))
-    sn.heatmap(df_cm, annot=True, fmt='f', cmap='crest', annot_kws={"size": 11})
+    config_list = list(fmn_config_dict.keys())
+    divide_plots = int(len(fmn_config_dict.keys()) / 2)
+    df_cm1 = pd.DataFrame(fmn_sr_matrix[:divide_plots, :divide_plots],
+                          index=[i for i in config_list[:divide_plots]],
+                          columns=[i for i in config_list[:divide_plots]])
+
+    df_cm2 = pd.DataFrame(fmn_sr_matrix[divide_plots:, divide_plots:],
+                          index=[i for i in config_list[divide_plots:]],
+                          columns=[i for i in config_list[divide_plots:]])
+    fig, ax = plt.subplots(1, 2, figsize=(42, 30))
+    ax = ax.flatten()
+    sn.heatmap(df_cm1, ax=ax[0], annot=True, fmt='.2f', cmap='crest')
+    sn.heatmap(df_cm2, ax=ax[1], annot=True, fmt='.2f', cmap='crest')
     plt.savefig(f'FMN-{model_folder}.pdf')
 
     aa_sr_matrix = np.zeros((len(aa_config_dict.keys()), len(aa_config_dict.keys())), )
@@ -82,9 +91,8 @@ def main(model_folder=None):
                 is_adv2_index = (compared_is_adv == True).float().nonzero()
                 all_adv_index = np.concatenate((is_adv1_index, is_adv2_index), axis=None)
                 unique_adv_index = np.unique(all_adv_index)
-                aa_sr_matrix[i, j] = float("{:.3f}".format(len(unique_adv_index) / batch_size * 100 ))
+                aa_sr_matrix[i, j] = float("{:.3f}".format(len(unique_adv_index) / batch_size * 100))
 
-    print(aa_sr_matrix)
     df_cm = pd.DataFrame(aa_sr_matrix, index=[i for i in aa_config_dict.keys()],
                          columns=[i for i in aa_config_dict.keys()])
     plt.figure(figsize=(10, 7))
