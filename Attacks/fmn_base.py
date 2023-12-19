@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.optim import SGD, Adam, Adamax
-from torch_optimizer import RAdam, QHAdam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
