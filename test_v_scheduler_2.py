@@ -92,10 +92,10 @@ def main(
     model.eval()
     model = model.to(device)
 
-    _bs = batch_size + 500
+    # _bs = batch_size + 250 # use this for cleaning misclassified points
     dataloader = DataLoader(
         dataset=dataset,
-        batch_size=_bs,
+        batch_size=batch_size,
         shuffle=shuffle
     )
 
