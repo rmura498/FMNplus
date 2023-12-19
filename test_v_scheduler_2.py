@@ -62,6 +62,40 @@ def configure_autoattack(model, steps, loss='CE'):
     return adversary
 
 
+def initialize_attack(attack_type='FMNBase', model=None, steps=None, loss=None):
+    if attack_type == 'AA':
+        attack = configure_autoattack(model, steps, loss)
+    elif attack_type == 'FMNVec':
+        attack = FMNVec(
+            model=model,
+            steps=steps,
+            loss=loss,
+            device=device,
+            epsilon=epsilon,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            norm=norm,
+            alpha_init=alpha_init,
+            gradient_strategy=gradient_update,
+            extra_iters=extra_iters
+        )
+    else:
+        attack = FMNBase(
+            model=model,
+            steps=steps,
+            loss=loss,
+            device=device,
+            epsilon=epsilon,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            norm=norm,
+            alpha_init=alpha_init,
+            gradient_strategy=gradient_update
+        )
+
+    return attack
+
+
 def main(
         batch_size=10,
         num_batches=1,
@@ -99,35 +133,7 @@ def main(
         shuffle=shuffle
     )
 
-    if attack_type == 'AA':
-        attack = configure_autoattack(model, steps, loss)
-    elif attack_type == 'FMNVec':
-        attack = FMNVec(
-            model=model,
-            steps=steps,
-            loss=loss,
-            device=device,
-            epsilon=epsilon,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            norm=norm,
-            alpha_init=alpha_init,
-            gradient_strategy=gradient_update,
-            extra_iters=extra_iters
-        )
-    else:
-        attack = FMNBase(
-            model=model,
-            steps=steps,
-            loss=loss,
-            device=device,
-            epsilon=epsilon,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            norm=norm,
-            alpha_init=alpha_init,
-            gradient_strategy=gradient_update
-        )
+    attack = initialize_attack(attack_type, model, steps, loss)
 
     for i, (samples, labels) in enumerate(dataloader):
         # print(f"Cleaning misclassified on batch {i}")
@@ -180,6 +186,8 @@ def main(
 
         with open(os.path.join(exp_path, filename), 'wb') as file:
             pickle.dump(attack_data, file)
+
+        attack = initialize_attack(attack_type, model, steps, loss)
 
         if i+1 == num_batches: break
 
