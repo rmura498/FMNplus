@@ -68,11 +68,13 @@ def main(model_folder=None):
     df_cm2 = pd.DataFrame(fmn_sr_matrix[divide_plots:, divide_plots:],
                           index=[i for i in config_list[divide_plots:]],
                           columns=[i for i in config_list[divide_plots:]])
+
     fig, ax = plt.subplots(1, 2, figsize=(42, 30))
     ax = ax.flatten()
+    fig.suptitle(f'{model_folder}')
     sn.heatmap(df_cm1, ax=ax[0], annot=True, fmt='.2f', cmap='crest')
     sn.heatmap(df_cm2, ax=ax[1], annot=True, fmt='.2f', cmap='crest')
-    plt.savefig(f'FMN-{model_folder}.pdf')
+    #plt.savefig(f'FMN-{model_folder}.pdf')
 
     aa_sr_matrix = np.zeros((len(aa_config_dict.keys()), len(aa_config_dict.keys())), )
 
@@ -95,10 +97,48 @@ def main(model_folder=None):
 
     df_cm = pd.DataFrame(aa_sr_matrix, index=[i for i in aa_config_dict.keys()],
                          columns=[i for i in aa_config_dict.keys()])
-    plt.figure(figsize=(10, 7))
-    sn.heatmap(df_cm, annot=True, fmt='.1f')
-    plt.savefig(f'AA-{model_folder}.pdf')
 
+    plt.figure(figsize=(10, 7))
+    fig.suptitle(f'{model_folder}')
+    sn.heatmap(df_cm, annot=True, fmt='.1f', cmap='crest')
+    #plt.savefig(f'AA-{model_folder}.pdf')
+
+    return fmn_sr_matrix, config_list
 
 if __name__ == '__main__':
-    main(model_folder='15122314_mid8')
+    exps = ["15122314_mid8", "14122317_mid9", "14122317_mid10", "15122314_mid11"]
+
+    list_of_matrix = []
+    for folders in exps:
+
+        fmn_sr_matrix, config_list = main(model_folder=folders)
+        list_of_matrix.append(fmn_sr_matrix)
+
+    # Get the dimensions of the matrices
+    num_rows, num_cols = list_of_matrix[0].shape
+    print("Shape", num_rows, num_cols)
+
+    # Initialize a matrix filled with zeros to store the mean values
+    mean_matrix = np.zeros((num_rows, num_cols))
+
+    for matrix in list_of_matrix:
+        print("Matrice\n\n", matrix)
+
+    # Calculate the mean for each position
+    for i in range(num_rows):
+        for j in range(num_cols):
+            # Calculate the mean for the (i, j) position
+            mean_value = sum(list_of_matrix[k][i][j] for k in range(len(list_of_matrix))) / len(list_of_matrix)
+            mean_matrix[i][j] = mean_value
+
+    # Print or use the mean_matrix as needed
+    print("Mean Matrix:", mean_matrix)
+
+    df_cm = pd.DataFrame(mean_matrix[:, :],
+                          index=[i for i in config_list[:]],
+                          columns=[i for i in config_list[:]])
+    fig, ax = plt.subplots(1, 1, figsize=(42, 30))
+
+    fig.suptitle(f'Mean SR Values')
+    sn.heatmap(df_cm, annot=True, fmt='.2f', cmap='crest')
+    plt.savefig(f'FMN-mean.pdf')

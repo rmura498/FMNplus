@@ -51,7 +51,6 @@ class VectorizedCosineAnnealing:
 
     def cosine(self, iteration):
         cosine = (1 + torch.cos(math.pi * iteration / self.total_iter)) / 2
-
         return cosine
 
     def step(self, loss, steps):
