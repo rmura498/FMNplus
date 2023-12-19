@@ -39,6 +39,7 @@ parser.add_argument('--cuda_device', type=int, default=0, help='Cuda device to u
 parser.add_argument('--alpha_init', type=float, default=2, help='Alpha init (learning rate init)')
 parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Normalization', 'Projection', 'Sign'], help='Gradient Update Strategy')
 parser.add_argument('--extra_iters', type=bool, default=False, help='Extra iters')
+parser.add_argument('--force_cpu', type=bool, default=False, help='Force CPU usage over Cuda')
 
 def configure_autoattack(model, steps, loss='CE'):
     _attacks = {
@@ -62,15 +63,15 @@ def configure_autoattack(model, steps, loss='CE'):
 
 
 def main(
-        batch_size = 10,
-        num_batches = 1,
-        steps = 30,
-        epsilon = 8/255, # None for dynamic one
+        batch_size=10,
+        num_batches=1,
+        steps=30,
+        epsilon=8/255, # None for dynamic one
         loss='CE',
-        optimizer = 'Adam',
-        scheduler = 'RLROP',
-        norm = inf,  # same as float('inf')
-        model_id = 8,
+        optimizer='Adam',
+        scheduler='RLROP',
+        norm=inf,  # same as float('inf')
+        model_id=8,
         shuffle=False,
         attack_type='FMNBase',
         alpha_init=2,
@@ -199,8 +200,12 @@ if __name__ == '__main__':
     alpha_init = float(args.alpha_init)
     gradient_update = str(args.gradient_update)
     extra_iters = bool(args.extra_iters)
+    force_cpu = bool(args.force_cpu)
 
-    device = torch.device(f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu")
+    if not force_cpu:
+        device = torch.device(f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device("cpu")
 
     main(
         batch_size=batch_size,
