@@ -5,7 +5,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.optim import SGD, Adam
+from torch.optim import SGD, Adam, Adamax
 from torch_optimizer import RAdam, QHAdam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
@@ -73,8 +73,7 @@ class FMN:
         optimizers = {
             'SGD': SGD,
             'Adam': Adam,
-            'RAdam': RAdam,
-            'QHAdam': QHAdam
+            'Adamax': Adamax
         }
 
         schedulers = {
