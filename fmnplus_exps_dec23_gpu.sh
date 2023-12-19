@@ -12,7 +12,7 @@ python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batc
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
             --attack_type FMNBase --optimizer Adam --scheduler None --loss LL --shuffle False --alpha_init $6 
 
-python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --force_cpu \
+python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
             --attack_type FMNBase --optimizer Adamax --scheduler None --loss DLR --shuffle False --alpha_init $6 
 python test_v_scheduler_2.py --model_id $5 --steps $1 --batch_size $2 --num_batches $3 --cuda_device $4 \
             --attack_type FMNBase --optimizer Adamax --scheduler None --loss CE --shuffle False --alpha_init $6 
