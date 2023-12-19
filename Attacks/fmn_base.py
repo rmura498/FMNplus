@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.optim import SGD, Adam, Adamax
-from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau, OneCycleLR
 
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
@@ -77,7 +77,8 @@ class FMN:
 
         schedulers = {
             'CALR': CosineAnnealingLR,
-            'RLROP': ReduceLROnPlateau
+            'RLROP': ReduceLROnPlateau,
+            'CLR': OneCycleLR
         }
 
         self.attack_data = {
@@ -205,6 +206,8 @@ class FMN:
                 scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
             elif self.scheduler_name == 'RLROP':
                 scheduler = self.scheduler(optimizer, factor=0.5, patience=2)
+            elif self.scheduler_name == 'CLR':
+                scheduler = self.scheduler(optimizer, max_lr=self.alpha_init, steps_per_epoch=1, epochs=self.steps)
             else:
                 scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
 
