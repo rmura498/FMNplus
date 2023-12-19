@@ -1,10 +1,8 @@
 import os
 import pickle
 import io
+
 import torch
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sn
 import pandas as pd
 from config import EXP_DIRECTORY
 
@@ -44,6 +42,7 @@ def main(model_folder=None):
 
     return fmn_sr_series
 
+
 if __name__ == '__main__':
     exp_list = os.listdir(EXP_DIRECTORY)
 
@@ -57,5 +56,8 @@ if __name__ == '__main__':
 
     fmn_sr_df_styled = fmn_sr_df.style.highlight_max(props='cellcolor:[HTML]{b666cc}; color:{white};' 'textit:--rwrap; textbf:--rwrap;').format("{:.2f}")
 
-    fmn_sr_df_styled.to_latex('fmn_sr_comparison_181223.txt')
+    from datetime import datetime
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%d%m%y%H")
+    fmn_sr_df_styled.to_latex(f'fmn_sr_comparison_{formatted_date}.txt')
 
