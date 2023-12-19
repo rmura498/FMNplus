@@ -130,10 +130,12 @@ def main(
         )
 
     for i, (samples, labels) in enumerate(dataloader):
-        print(f"Cleaning misclassified on batch {i}")
+        # print(f"Cleaning misclassified on batch {i}")
         # clean misclassified
         samples = samples.to(device)
         labels = labels.to(device)
+
+        '''
         logits = model(samples)
         pred_labels = logits.argmax(dim=1)
         correctly_classified_samples = pred_labels == labels
@@ -143,6 +145,7 @@ def main(
         # retrieving only requested batch size
         samples = samples[:batch_size]
         labels = labels[:batch_size]
+        '''
 
         print(f"Running attack on batch {i} of size {samples.shape}")
         if 'AA' in attack_type:
