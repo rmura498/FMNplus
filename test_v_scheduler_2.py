@@ -30,7 +30,7 @@ parser.add_argument('--steps', type=int, default=30, help='Number of steps')
 parser.add_argument('--epsilon', type=float, default=8/255, help='Epsilon value, None for dynamic one')
 parser.add_argument('--loss', type=str, default='CE', choices=['CE', 'DLR', 'LL'], help='Loss function')
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD', 'Adamax'], help='Optimizer')
-parser.add_argument('--scheduler', type=str, default='RLROP', choices=['RLROPVec', 'CALRVec', 'RLROP', 'CALR', 'None'], help='Scheduler')
+parser.add_argument('--scheduler', type=str, default='RLROP', choices=['RLROPVec', 'CALRVec', 'RLROP', 'CALR', 'CLR', 'None'], help='Scheduler')
 parser.add_argument('--norm', type=float, default=float('inf'), help='Norm value')
 parser.add_argument('--model_id', type=int, default=8, help='Model ID')
 parser.add_argument('--shuffle', type=bool, default=False, help='Shuffle data')
@@ -39,6 +39,7 @@ parser.add_argument('--cuda_device', type=int, default=0, help='Cuda device to u
 parser.add_argument('--alpha_init', type=float, default=2, help='Alpha init (learning rate init)')
 parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Normalization', 'Projection', 'Sign'], help='Gradient Update Strategy')
 parser.add_argument('--extra_iters', type=bool, default=False, help='Extra iters')
+parser.add_argument('--force_cpu', type=bool, default=False, help='Force CPU usage over Cuda')
 
 def configure_autoattack(model, steps, loss='CE'):
     _attacks = {
@@ -61,43 +62,7 @@ def configure_autoattack(model, steps, loss='CE'):
     return adversary
 
 
-def main(
-        batch_size = 10,
-        num_batches = 1,
-        steps = 30,
-        epsilon = 8/255, # None for dynamic one
-        loss='CE',
-        optimizer = 'Adam',
-        scheduler = 'RLROP',
-        norm = inf,  # same as float('inf')
-        model_id = 8,
-        shuffle=False,
-        attack_type='FMNBase',
-        alpha_init=2,
-        gradient_update='Sign',
-        extra_iters=False
-):
-    # creating exp folder
-    current_date = datetime.now()
-    formatted_date = current_date.strftime("%d%m%y%H")
-    epsilon_name = "8-255" if epsilon == 8 / 255 else "None"
-    exp_path = os.path.join(EXP_DIRECTORY, f"{formatted_date}_mid{model_id}")
-
-    if not os.path.exists(exp_path):
-        os.makedirs(exp_path, exist_ok=True)
-
-    # loading model and dataset
-    model, dataset, model_name, dataset_name = load_data(model_id=model_id)
-    model.eval()
-    model = model.to(device)
-
-    _bs = batch_size + 500
-    dataloader = DataLoader(
-        dataset=dataset,
-        batch_size=_bs,
-        shuffle=shuffle
-    )
-
+def initialize_attack(attack_type='FMNBase', model=None, steps=None, loss=None):
     if attack_type == 'AA':
         attack = configure_autoattack(model, steps, loss)
     elif attack_type == 'FMNVec':
@@ -128,11 +93,55 @@ def main(
             gradient_strategy=gradient_update
         )
 
+    return attack
+
+
+def main(
+        batch_size=10,
+        num_batches=1,
+        steps=30,
+        epsilon=8/255, # None for dynamic one
+        loss='CE',
+        optimizer='Adam',
+        scheduler='RLROP',
+        norm=inf,  # same as float('inf')
+        model_id=8,
+        shuffle=False,
+        attack_type='FMNBase',
+        alpha_init=2,
+        gradient_update='Sign',
+        extra_iters=False
+):
+    # creating exp folder
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%d%m%y%H")
+    epsilon_name = "8-255" if epsilon == 8 / 255 else "None"
+    exp_path = os.path.join(EXP_DIRECTORY, f"{formatted_date}_mid{model_id}")
+
+    if not os.path.exists(exp_path):
+        os.makedirs(exp_path, exist_ok=True)
+
+    # loading model and dataset
+    model, dataset, model_name, dataset_name = load_data(model_id=model_id)
+    model.eval()
+    model = model.to(device)
+
+    # _bs = batch_size + 250 # use this for cleaning misclassified points
+    dataloader = DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle
+    )
+
+    attack = initialize_attack(attack_type, model, steps, loss)
+
     for i, (samples, labels) in enumerate(dataloader):
-        print(f"Cleaning misclassified on batch {i}")
+        # print(f"Cleaning misclassified on batch {i}")
         # clean misclassified
         samples = samples.to(device)
         labels = labels.to(device)
+
+        '''
         logits = model(samples)
         pred_labels = logits.argmax(dim=1)
         correctly_classified_samples = pred_labels == labels
@@ -142,6 +151,7 @@ def main(
         # retrieving only requested batch size
         samples = samples[:batch_size]
         labels = labels[:batch_size]
+        '''
 
         print(f"Running attack on batch {i} of size {samples.shape}")
         if 'AA' in attack_type:
@@ -172,10 +182,12 @@ def main(
         # Saving data
         print(f"Saving attack data on batch {i}")
         filename = (f"{formatted_date}_mid{model_id}_{attack_type}_{epsilon_name}_{batch_size}_{steps}_{optimizer}"
-                    f"_{scheduler}_{loss}_{gradient_update}_extraiters{str(extra_iters)}.pkl")
+                    f"_{scheduler}_{loss}_{gradient_update}_extraiters{str(extra_iters)}_bid{i}.pkl")
 
         with open(os.path.join(exp_path, filename), 'wb') as file:
             pickle.dump(attack_data, file)
+
+        attack = initialize_attack(attack_type, model, steps, loss)
 
         if i+1 == num_batches: break
 
@@ -199,8 +211,12 @@ if __name__ == '__main__':
     alpha_init = float(args.alpha_init)
     gradient_update = str(args.gradient_update)
     extra_iters = bool(args.extra_iters)
+    force_cpu = bool(args.force_cpu)
 
-    device = torch.device(f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu")
+    if not force_cpu:
+        device = torch.device(f"cuda:{cuda_device}" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device("cpu")
 
     main(
         batch_size=batch_size,
