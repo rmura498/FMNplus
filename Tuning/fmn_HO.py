@@ -15,6 +15,7 @@ from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_proj
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
 from Utils.loss import difference_of_logits, dlr_loss
 
+from ray import train
 
 class HOFMN:
     r"""
@@ -178,7 +179,7 @@ class HOFMN:
 
         return epsilon, delta, is_adv
 
-    def forward(self, images, labels, batch_size = None):
+    def forward(self, images, labels, epochs, tuning_metric_name, report_inside=True, batch_size=None):
 
         images = images.clone().detach().to(self.device)
         labels = labels.clone().detach().to(self.device)
@@ -206,13 +207,23 @@ class HOFMN:
         delta.requires_grad_(True)
         delta = delta.to(self.device)
 
-        optimizer = self.optimizer([delta], **self.optimizer_config)
-        #optimizer = self.optimizer([delta], lr=self.alpha_init)
+        # LS: I've done this to let beta0, beta1 (or betas) vary over the tuning phase
+        if self.optimizer_name == 'Adam':
+            opt_conf = self.optimizer_config.copy()
+            opt_conf['betas'] = (opt_conf['beta0'], opt_conf['beta1'])
+            del opt_conf['beta0']
+            del opt_conf['beta1']
+        else:
+            opt_conf = self.optimizer_config.copy()
 
-        if self.scheduler is not None:
+        optimizer = self.optimizer([delta], **opt_conf)
+        # optimizer = self.optimizer([delta], lr=self.alpha_init)
+
+        if self.scheduler is not None and self.scheduler_config is not None:
             if self.scheduler_name == 'CALR':
                 self.scheduler_config['T_max'] = self.steps
-            scheduler = self.scheduler(self.optimizer, **self.scheduler_config)
+
+            scheduler = self.scheduler(optimizer, **self.scheduler_config)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
@@ -329,4 +340,14 @@ class HOFMN:
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
                 self.attack_data['is_adv'] = is_adv.cpu()
 
-        return torch.median(best_distance), init_trackers['best_adv'],
+            if tuning_metric_name == 'success_rate':
+                tuning_metric = ('success_rate', self.attack_data['success_rate'][-1])
+            else:
+                tuning_metric = ('distance', torch.median(best_distance).item())
+
+            # LS: Here I've tried to report the tuning metric every epochs
+            # train.report({"distance": torch.median(best_distance).item()})
+            if report_inside and i % epochs == 0:
+                train.report(dict(tuning_metric))
+
+        return tuning_metric, init_trackers['best_adv'],

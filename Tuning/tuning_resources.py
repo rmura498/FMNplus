@@ -19,6 +19,5 @@ or cpu and gpu x trial
 """
 
 TUNING_RES = {
-    'cpu': 6,
-    'cpu': 6
+    'cpu': 12/4 # LS: more convenient to define a fraction of CPUs (automatic assignment to each samples)
 }
