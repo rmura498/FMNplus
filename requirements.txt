@@ -1,6 +1,10 @@
-torch == 2.1.0
+torch==2.1.0
 torchvision
 matplotlib
 seaborn
 git+https://github.com/RobustBench/robustbench.git
 torch_optimizer
+
+ray[data,train,tune]
+ax-platform
+sqlalchemy==1.4.50
