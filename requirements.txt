@@ -3,8 +3,7 @@ torchvision
 matplotlib
 seaborn
 git+https://github.com/RobustBench/robustbench.git
-torch_optimizer
 
-ray[data,train,tune]
 ax-platform
+ax-platform[mysql]
 sqlalchemy==1.4.50
