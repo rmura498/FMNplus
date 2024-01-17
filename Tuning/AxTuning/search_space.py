@@ -37,7 +37,7 @@ SchedulerParams = {
     {
         'batch_size': lambda bs: {"name": "batch_size", "type": "fixed", "value": bs, "value_type": "int"},
         'factor': {"name": "factor", "type": "range", "bounds": [0.1, 0.5], "value_type": "float"},
-        'patience': {"name": "patience", "type": "choice", "bounds": [2, 5, 10], "value_type": "int"},
+        'patience': {"name": "patience", "type": "choice", "values": [2, 5, 10], "value_type": "int"},
         'threshold': {"name": "threshold", "type": "fixed", "value": 1e-4, "value_type": "float"},
         'eps': {"name": "eps", "type": "fixed", "value": 1e-8, "value_type": "float"}
     }
