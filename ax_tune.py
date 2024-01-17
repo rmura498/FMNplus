@@ -18,7 +18,6 @@ parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'S
 parser.add_argument('--scheduler', type=str, default=None, choices=['RLROPVec', 'CALR', 'None'],  help='Scheduler for the attack')
 parser.add_argument('--steps', type=int, default=20, help='Steps of the attack')
 parser.add_argument('--loss', type=str, default='CE', help='Loss for the attack')
-parser.add_argument('--epsilon', type=float, default=None, help='Variable (None) or fixed epsilon ball size')
 parser.add_argument('--norm', type=float, default=float('inf'), help='Type of norm (e.g. Linf, L0, L1, L2)')
 parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Normalization', 'Projection', 'Sign'], help='Attack\'s gradient update strategy')
 parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparams optimization trials')
@@ -35,7 +34,6 @@ optimizer = args.optimizer
 scheduler = str(args.scheduler)
 steps = int(args.steps)
 loss = args.loss
-epsilon = float(args.epsilon) if args.epsilon else args.epsilon
 norm = float(args.norm)
 gradient_update = args.gradient_update
 n_trials = int(args.n_trials)
@@ -58,7 +56,7 @@ def attack_evaluate(parametrization):
         steps=steps,
         loss=loss,
         device=device,
-        epsilon=epsilon,
+        epsilon=None,
         optimizer=optimizer,
         scheduler=scheduler,
         norm=norm,
