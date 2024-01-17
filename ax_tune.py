@@ -21,7 +21,7 @@ parser.add_argument('--loss', type=str, default='CE', help='Loss for the attack'
 parser.add_argument('--norm', type=float, default=float('inf'), help='Type of norm (e.g. Linf, L0, L1, L2)')
 parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Normalization', 'Projection', 'Sign'], help='Attack\'s gradient update strategy')
 parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparams optimization trials')
-parser.add_argument('--device', type=str, default='cpu', choices=['RLROPVec', 'CALR', 'None'], help='Device to use (cpu, cuda:0, cuda:1)')
+parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
 parser.add_argument('--cuda_device', type=int, default=0, help='Specific gpu to use like 0, 1 etc - (optional)')
 
 
