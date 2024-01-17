@@ -6,7 +6,8 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.optim import SGD, Adam, Adamax
-from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau, OneCycleLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from Schedulers.RLROP_vec import ReduceLROnPlateau as RLROPvec
 
 from Utils.metrics import l0_projection, l1_projection, linf_projection, l2_projection
 from Utils.metrics import l0_mid_points, l1_mid_points, l2_mid_points, linf_mid_points
@@ -50,6 +51,8 @@ class FMN:
                  scheduler='CALR',
                  gradient_strategy='Normalization',
                  initialization_strategy='Standard',
+                 optimizer_config = None,
+                 scheduler_config = None,
                  verbose=False
                  ):
         self.model = model
@@ -69,6 +72,9 @@ class FMN:
 
         self.epsilon = epsilon
 
+        self.optimizer_config = optimizer_config
+        self.scheduler_config = scheduler_config
+
         optimizers = {
             'SGD': SGD,
             'Adam': Adam,
@@ -77,8 +83,7 @@ class FMN:
 
         schedulers = {
             'CALR': CosineAnnealingLR,
-            'RLROP': ReduceLROnPlateau,
-            'CLR': OneCycleLR
+            'RLROPVec': RLROPvec
         }
 
         self.attack_data = {
@@ -103,13 +108,12 @@ class FMN:
         self.optimizer = optimizers[self.optimizer_name]
         self.scheduler = None
 
-        if self.scheduler_name != 'None':
+        if self.scheduler_name is not None:
             self.scheduler = schedulers[self.scheduler_name]
 
         self.verbose = verbose
 
     def _gradient_update(self, delta_grad, batch_view, step_size):
-
         if self.gradient_strategy == 'Normalization':
             # normalize gradient
             grad_norms = delta_grad.flatten(1).norm(p=float('inf'), dim=1).clamp_(min=1e-12)
@@ -126,8 +130,7 @@ class FMN:
         return delta_grad
 
     def _initialization(self, images, labels, batch_size):
-
-        delta = torch.zeros_like(images, device=self.device)
+        delta = torch.zeros_like(images, device=self.device, requires_grad=True)
         is_adv = None
 
         if self.initialization_strategy == 'Starting Points':
@@ -172,7 +175,6 @@ class FMN:
         return epsilon, delta, is_adv
 
     def forward(self, images, labels, batch_size = None):
-
         images = images.clone().detach().to(self.device)
         labels = labels.clone().detach().to(self.device)
 
@@ -196,24 +198,63 @@ class FMN:
         }
 
         multiplier = 1 if self.targeted else -1
-        delta.requires_grad_(True)
-        delta = delta.to(self.device)
 
-        optimizer = self.optimizer([delta], lr=self.alpha_init)
+        if self.optimizer_config is None:
+            optimizer = self.optimizer([delta], lr=self.alpha_init)
+        else:
+            if 'beta1' in self.optimizer_config:
+                betas = (self.optimizer_config['beta1'], self.optimizer_config['beta2'])
+                self.optimizer_config['betas'] = betas
+                del self.optimizer_config['beta1']
+                del self.optimizer_config['beta2']
+
+            optimizer = self.optimizer([delta], **self.optimizer_config)
 
         if self.scheduler is not None:
-            if self.scheduler_name == 'CALR':
-                scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
-            elif self.scheduler_name == 'RLROP':
-                scheduler = self.scheduler(optimizer, factor=0.5, patience=2)
-            elif self.scheduler_name == 'CLR':
-                scheduler = self.scheduler(optimizer, max_lr=self.alpha_init, steps_per_epoch=1, epochs=self.steps)
+            if self.scheduler_config is None:
+                if self.scheduler_name == 'CALR':
+                    scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
+                elif self.scheduler_name == 'CLR':
+                    scheduler = self.scheduler(optimizer, max_lr=self.alpha_init, steps_per_epoch=1, epochs=self.steps)
+                elif self.scheduler_name == 'RLROPVec':
+                    scheduler = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
+                else:
+                    scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
+            elif self.scheduler_name != 'RLROPVec':
+                scheduler = self.scheduler(optimizer, **self.scheduler_config)
             else:
-                scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
+                scheduler = RLROPvec(verbose=self.verbose, device=self.device, **self.scheduler_config)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
             epsilon = epsilon.to(self.device)
+
+        if self.loss == 'CE':
+            c_loss = nn.CrossEntropyLoss(reduction='none')
+            loss_fn = lambda logits, labels: -c_loss(logits, labels)
+        elif self.loss == 'DLR':
+            loss_fn = lambda logits, labels: -dlr_loss(logits, labels)
+        else:
+            logits = self.model(adv_images)
+            labels_infhot = torch.zeros_like(logits).scatter_(
+                1,
+                labels.unsqueeze(1),
+                float('inf')
+            )
+            logit_diff_func = partial(
+                difference_of_logits,
+                labels=labels,
+                labels_infhot=labels_infhot
+            )
+            loss_fn = lambda logits, labels: -(multiplier * logit_diff_func(logits=logits))
+
+        if self.epsilon is not None:
+            epsilon = torch.ones(1) * self.epsilon
+            epsilon = epsilon.to(self.device)
+
+        if self.scheduler_name == 'RLROPVec':
+            learning_rates = torch.ones(batch_size) * self.alpha_init
+            learning_rates = learning_rates.to(self.device)
 
         for i in range(self.steps):
             optimizer.zero_grad()
@@ -228,35 +269,13 @@ class FMN:
             logits = self.model(adv_images)
             pred_labels = logits.argmax(dim=1)
 
-            if i == 0:
-                labels_infhot = torch.zeros_like(logits).scatter_(
-                    1,
-                    labels.unsqueeze(1),
-                    float('inf')
-                )
-                logit_diff_func = partial(
-                    difference_of_logits,
-                    labels=labels,
-                    labels_infhot=labels_infhot
-                )
-
+            '''
             if self.epsilon is None:
                 logit_diffs = logit_diff_func(logits=logits)
                 ll = -(multiplier * logit_diffs)
                 ll.sum().backward(retain_graph=True)
                 delta_grad = delta.grad.data
-
-            if self.loss == 'LL':
-                logit_diffs = logit_diff_func(logits=logits)
-                loss = -(multiplier * logit_diffs)
-
-            elif self.loss == 'CE':
-                c_loss = nn.CrossEntropyLoss(reduction='none')
-                loss = -c_loss(logits, labels)
-
-            elif self.loss == 'DLR':
-                loss = -dlr_loss(logits, labels)
-
+            '''
 
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']
@@ -278,7 +297,8 @@ class FMN:
                                           torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
                     epsilon.clamp_(min=0)
                 else:
-                    distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
+                    # distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
+                    distance_to_boundary = 4/255
                     epsilon = torch.where(is_adv,
                                           torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
                                           torch.where(init_trackers['adv_found'],
@@ -286,16 +306,24 @@ class FMN:
                                                       delta_norm + distance_to_boundary)
                                           )
 
-            loss.sum().backward()
-            delta_grad = delta.grad.data
+            loss = loss_fn(logits, labels)
+
+            if self.verbose:
+                print(f"loss mean[{i}]:\n{loss.mean()}")
+                print(f"steps[{i}]:\n{steps}")
+
+            if self.scheduler_name == 'RLROPVec':
+                v_loss = torch.dot(loss, learning_rates)
+                v_loss.backward()
+            else:
+                loss.sum().backward()
 
             # clip epsilon
             if self.epsilon is None:
                 epsilon = torch.minimum(epsilon, init_trackers['worst_norm'])
 
             # gradient update strategy
-            delta_grad = self._gradient_update(delta_grad, batch_view, optimizer.param_groups[0]['lr'])
-            delta.grad.data = delta_grad
+            delta.grad.data = self._gradient_update(delta.grad.data, batch_view, optimizer.param_groups[0]['lr'])
 
             optimizer.step()
 
@@ -307,8 +335,8 @@ class FMN:
                                               dim=1, ord=self.norm)
 
             if self.scheduler is not None:
-                if self.scheduler_name == 'RLROP':
-                    scheduler.step(loss.mean())
+                if self.scheduler_name == 'RLROPVec':
+                    steps = scheduler.step(loss, steps)
                 else:
                     scheduler.step()
 
@@ -326,4 +354,4 @@ class FMN:
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
                 self.attack_data['is_adv'] = is_adv.cpu()
 
-        return init_trackers['best_adv'], best_distance
+        return init_trackers['best_adv'], best_distance, self.attack_data['success_rate'][-1]
