@@ -3,7 +3,7 @@ from datetime import datetime
 
 import torch
 from torch.utils.data import DataLoader
-from ax.service.ax_client import AxClient, ObjectiveProperties
+from ax.service.ax_client import AxClient
 
 from Attacks.fmn_base import FMN
 from Utils.load_model import load_data
