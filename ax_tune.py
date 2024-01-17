@@ -7,9 +7,7 @@ from ax.service.ax_client import AxClient
 
 from Attacks.fmn_base import FMN
 from Utils.load_model import load_data
-from AxTuning.search_space import OptimizerParams, SchedulerParams
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+from Tuning.AxTuning.search_space import OptimizerParams, SchedulerParams
 
 parser = argparse.ArgumentParser(description="Tune FMN Hyperparameters with Ax")
 
@@ -41,6 +39,10 @@ epsilon = float(args.epsilon) if args.epsilon else args.epsilon
 norm = float(args.norm)
 gradient_update = args.gradient_update
 n_trials = int(args.n_trials)
+
+device = args.device
+if not torch.cuda.is_available():
+    device = 'cpu'
 
 
 def attack_evaluate(parametrization):
