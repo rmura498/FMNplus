@@ -106,8 +106,7 @@ else:
     params = list(opt_params.values())
 
 # Create an experiment with required arguments: name, parameters, and objective_name.
-experiment_name = f'mid{model_id}_{batch_size}_{steps}_{optimizer}"\
-                    f"_{scheduler}_{loss}_{gradient_update}'
+experiment_name = f'mid{model_id}_{batch_size}_{steps}_{optimizer}_{scheduler}_{loss}_{gradient_update}'
 ax_client.create_experiment(
     name=experiment_name,
     parameters=params,
