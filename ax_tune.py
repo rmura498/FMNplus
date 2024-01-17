@@ -116,7 +116,7 @@ ax_client.create_experiment(
 
 print("\t[Tuning] Starting the Hyperparameters Optimization...")
 for i in range(n_trials):
-    print("\t[Tuning] Running trial {}")
+    print(f"\t[Tuning] Running trial {i}")
     parameters, trial_index = ax_client.get_next_trial()
     ax_client.complete_trial(trial_index=trial_index, raw_data=attack_evaluate(parameters))
 
