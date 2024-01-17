@@ -336,7 +336,7 @@ class FMN:
 
             if self.scheduler is not None:
                 if self.scheduler_name == 'RLROPVec':
-                    steps = scheduler.step(loss, steps)
+                    steps = scheduler.step(loss, learning_rates)
                 else:
                     scheduler.step()
 
