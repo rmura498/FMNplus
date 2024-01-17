@@ -109,7 +109,8 @@ experiment_name = f'mid{model_id}_{batch_size}_{steps}_{optimizer}"\
 ax_client.create_experiment(
     name=experiment_name,
     parameters=params,
-    objectives={"distance": ObjectiveProperties(minimize=True)}
+    objective_name="distance",
+    minimize=True
 )
 
 print("\t[Tuning] Starting the Hyperparameters Optimization...")
