@@ -12,9 +12,9 @@ from ray.tune.search.ax import AxSearch
 
 from Utils.load_model import load_data
 
-from Tuning.fmn_HO import HOFMN
-from Tuning.search_space import OPTIMIZERS_SEARCH_TUNE, SCHEDULERS_SEARCH_TUNE
-from Tuning.tuning_resources import TUNING_RES
+from RayTuning.fmn_HO import HOFMN
+from RayTuning.search_space import OPTIMIZERS_SEARCH_TUNE, SCHEDULERS_SEARCH_TUNE
+from RayTuning.tuning_resources import TUNING_RES
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
