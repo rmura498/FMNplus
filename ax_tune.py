@@ -24,6 +24,8 @@ parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparam
 parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
 parser.add_argument('--cuda_device', type=int, default=-1, help='Specific gpu to use like -1 (discard gpu selection), 0 or 1')
 
+parser.add_argument('--fixed_batch', type=bool, default=True, help='Fixed (or variable) batch')
+
 
 args = parser.parse_args()
 
@@ -39,6 +41,7 @@ gradient_update = args.gradient_update
 n_trials = int(args.n_trials)
 device = args.device
 cuda_device = int(args.cuda_device)
+fixed_batch = bool(args.fixed_batch)
 
 if scheduler == 'None': scheduler = None
 
@@ -50,6 +53,8 @@ if device == 'cuda' and cuda_device != -1:
 
 
 def attack_evaluate(parametrization):
+    global images, labels
+
     optimizer_config = {k: parametrization[k] for k in set(opt_params)}
     scheduler_config = None
     if scheduler is not None:
@@ -72,6 +77,9 @@ def attack_evaluate(parametrization):
     _, best_distance, _ = attack.forward(images=images, labels=labels)
     best_distance = float(best_distance.mean().item())
     # sr = float(sr)
+
+    if not fixed_batch:
+        images, labels = next(iter(dataloader))
 
     return {'distance': (best_distance, 0.0)}
 
@@ -97,6 +105,7 @@ dataloader = DataLoader(
     batch_size=batch_size,
     shuffle=shuffle
 )
+
 images, labels = next(iter(dataloader))
 
 # Create Ax Experiment
