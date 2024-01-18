@@ -214,8 +214,6 @@ class FMN:
             if self.scheduler_config is None:
                 if self.scheduler_name == 'CALR':
                     scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
-                elif self.scheduler_name == 'CLR':
-                    scheduler = self.scheduler(optimizer, max_lr=self.alpha_init, steps_per_epoch=1, epochs=self.steps)
                 elif self.scheduler_name == 'RLROPVec':
                     scheduler = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
                 else:
@@ -253,7 +251,7 @@ class FMN:
             epsilon = epsilon.to(self.device)
 
         if self.scheduler_name == 'RLROPVec':
-            learning_rates = torch.ones(batch_size) * self.alpha_init
+            learning_rates = torch.ones(batch_size) * optimizer.param_groups[0]['lr']
             learning_rates = learning_rates.to(self.device)
 
         for i in range(self.steps):
