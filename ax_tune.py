@@ -83,8 +83,10 @@ def attack_evaluate(parametrization):
     if not fixed_batch:
         images, labels = next(iter(dataloader))
 
-    evaluation = {'distance': (best_distance, 0.0)} if not optimize_sr else \
-        {'distance': (best_distance, 0.0), 'sr': (sr, 0.0)}
+    if not optimize_sr:
+        evaluation = {'distance': (best_distance, 0.0)}
+    else:
+        evaluation = {'distance': (best_distance, 0.0), 'sr': (sr, 0.0)}
 
     return evaluation
 
