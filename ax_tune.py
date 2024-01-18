@@ -4,6 +4,7 @@ from datetime import datetime
 import torch
 from torch.utils.data import DataLoader
 from ax.service.ax_client import AxClient
+from ax.service.utils.instantiation import ObjectiveProperties
 
 from Attacks.fmn_base import FMN
 from Utils.load_model import load_data
@@ -23,8 +24,8 @@ parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Nor
 parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparams optimization trials')
 parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
 parser.add_argument('--cuda_device', type=int, default=-1, help='Specific gpu to use like -1 (discard gpu selection), 0 or 1')
-
 parser.add_argument('--fixed_batch', type=bool, default=True, help='Fixed (or variable) batch')
+parser.add_argument('--optimize_sr', type=bool, default=False, help='Optimize min distance and max sr (attack success rate)')
 
 
 args = parser.parse_args()
@@ -42,6 +43,7 @@ n_trials = int(args.n_trials)
 device = args.device
 cuda_device = int(args.cuda_device)
 fixed_batch = bool(args.fixed_batch)
+optimize_sr = bool(args.optimize_sr)
 
 if scheduler == 'None': scheduler = None
 
@@ -74,14 +76,17 @@ def attack_evaluate(parametrization):
         scheduler_config=scheduler_config
     )
 
-    _, best_distance, _ = attack.forward(images=images, labels=labels)
+    _, best_distance, sr = attack.forward(images=images, labels=labels)
     best_distance = float(best_distance.mean().item())
-    # sr = float(sr)
+    sr = float(sr)
 
     if not fixed_batch:
         images, labels = next(iter(dataloader))
 
-    return {'distance': (best_distance, 0.0)}
+    evaluation = {'distance': (best_distance, 0.0)} if not optimize_sr else \
+        {'distance': (best_distance, 0.0), 'sr': (sr, 0.0)}
+
+    return evaluation
 
 
 # Retrieve optimizer and scheduler params
@@ -118,13 +123,19 @@ if scheduler is not None:
 else:
     params = list(opt_params.values())
 
+# Define the objective(s)
+objectives = {
+    'distance': ObjectiveProperties(minimize=True, threshold=8/255*2)
+}
+if optimize_sr:
+    objectives['sr'] = ObjectiveProperties(minimize=False, threshold=0.3)
+
 # Create an experiment with required arguments: name, parameters, and objective_name.
 experiment_name = f'mid{model_id}_{batch_size}_{steps}_{n_trials}_{optimizer}_{scheduler}_{loss}_{gradient_update}'
 ax_client.create_experiment(
     name=experiment_name,
     parameters=params,
-    objective_name="distance",
-    minimize=True
+    objectives=objectives
 )
 
 print("\t[Tuning] Starting the Hyperparameters Optimization...")
