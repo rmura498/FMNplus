@@ -4,14 +4,14 @@ Hyperparams to be optimized using Ax
 
 OptimizerParams = {
     'SGD': {
-        'lr': {"name": "lr", "type": "range", "bounds": [(8/255)*2, 10], "value_type": "float", "log_scale": True},
+        'lr': {"name": "lr", "type": "range", "bounds": [8/255, 10], "value_type": "float", "log_scale": True},
         'momentum': {"name": "momentum", "type": "range", "bounds": [0.0, 0.9], "value_type": "float"},
         'weight_decay': {"name": "weight_decay", "type": "range", "bounds": [0.01, 1.0], "value_type": "float"},
         'dampening': {"name": "dampening", "type": "range", "bounds": [0.0, 0.2], "value_type": "float"}
     },
     'Adam':
     {
-        'lr': {"name": "lr", "type": "range", "bounds": [(8/255)*2, 10], "value_type": "float", "log_scale": True},
+        'lr': {"name": "lr", "type": "range", "bounds": [8/255, 10], "value_type": "float", "log_scale": True},
         'weight_decay': {"name": "weight_decay", "type": "range", "bounds": [0.01, 1.0], "value_type": "float"},
         'eps': {"name": "eps", "type": "fixed", "value": 1e-8, "value_type": "float"},
         'beta1': {"name": "beta1", "type": "range", "bounds": [0.0, 0.999], "value_type": "float"},
@@ -19,7 +19,7 @@ OptimizerParams = {
     },
     'Adamax':
     {
-        'lr': {"name": "lr", "type": "range", "bounds": [(8/255)*2, 10], "value_type": "float", "log_scale": True},
+        'lr': {"name": "lr", "type": "range", "bounds": [8/255, 10], "value_type": "float", "log_scale": True},
         'weight_decay': {"name": "weight_decay", "type": "range", "bounds": [0.01, 1.0], "value_type": "float"},
         'eps': {"name": "eps", "type": "fixed", "value": 1e-8, "value_type": "float"},
         'beta1': {"name": "beta1", "type": "range", "bounds": [0.0, 0.999], "value_type": "float"},
