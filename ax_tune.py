@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description="Tune FMN Hyperparameters with Ax")
 
 parser.add_argument('--model_id', type=int, default=8, help='Robustbench model\'s id')
 parser.add_argument('--batch_size', type=int, default=32, help='Size of a single batch')
-parser.add_argument('--shuffle', type=bool, default=False, help='Shuffle samples of each batch')
+parser.add_argument('--shuffle', action="store_true", help='Shuffle samples of each batch')
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD', 'Adamax'], help='Optimizer for the attack')
 parser.add_argument('--scheduler', type=str, default=None, choices=['RLROPVec', 'CALR', 'None'],  help='Scheduler for the attack')
 parser.add_argument('--steps', type=int, default=20, help='Steps of the attack')
@@ -24,15 +24,14 @@ parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Nor
 parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparams optimization trials')
 parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
 parser.add_argument('--cuda_device', type=int, default=-1, help='Specific gpu to use like -1 (discard gpu selection), 0 or 1')
-parser.add_argument('--fixed_batch', type=bool, default=True, help='Fixed (or variable) batch')
-parser.add_argument('--optimize_sr', type=bool, default=False, help='Optimize min distance and max sr (attack success rate)')
-
+parser.add_argument('--fixed_batch', action="store_true", help='Fixed (or variable) batch')
+parser.add_argument('--optimize_sr', action="store_true", help='Optimize min distance and max sr (attack success rate)')
 
 args = parser.parse_args()
 
 model_id = int(args.model_id)
 batch_size = int(args.batch_size)
-shuffle = bool(args.shuffle)
+shuffle = args.shuffle
 optimizer = args.optimizer
 scheduler = str(args.scheduler)
 steps = int(args.steps)
@@ -42,8 +41,8 @@ gradient_update = args.gradient_update
 n_trials = int(args.n_trials)
 device = args.device
 cuda_device = int(args.cuda_device)
-fixed_batch = bool(args.fixed_batch)
-optimize_sr = bool(args.optimize_sr)
+fixed_batch = args.fixed_batch
+optimize_sr = args.optimize_sr
 
 if scheduler == 'None': scheduler = None
 
