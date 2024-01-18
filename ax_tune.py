@@ -22,7 +22,7 @@ parser.add_argument('--norm', type=float, default=float('inf'), help='Type of no
 parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Normalization', 'Projection', 'Sign'], help='Attack\'s gradient update strategy')
 parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparams optimization trials')
 parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
-parser.add_argument('--cuda_device', type=int, default=0, help='Specific gpu to use like 0, 1 etc - (optional)')
+parser.add_argument('--cuda_device', type=int, default=-1, help='Specific gpu to use like -1 (discard gpu selection), 0 or 1')
 
 
 args = parser.parse_args()
@@ -37,12 +37,16 @@ loss = args.loss
 norm = float(args.norm)
 gradient_update = args.gradient_update
 n_trials = int(args.n_trials)
+device = args.device
+cuda_device = int(args.cuda_device)
 
 if scheduler == 'None': scheduler = None
 
-device = args.device
 if not torch.cuda.is_available():
     device = 'cpu'
+
+if device == 'cuda' and cuda_device != -1:
+    device = 'cuda:' + str(cuda_device)
 
 
 def attack_evaluate(parametrization):
