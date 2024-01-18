@@ -41,6 +41,12 @@ parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Nor
 parser.add_argument('--extra_iters', type=bool, default=False, help='Extra iters')
 parser.add_argument('--force_cpu', type=bool, default=False, help='Force CPU usage over Cuda')
 
+# TODO: check boolean arguments
+# consider using this:
+'''
+parser.add_argument('--param', action="store_true", help='...')
+'''
+
 def configure_autoattack(model, steps, loss='CE'):
     _attacks = {
         'CE': ('apgd-ce',),
