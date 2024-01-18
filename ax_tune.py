@@ -147,8 +147,9 @@ for i in range(n_trials):
 print("\t[Tuning] Finished the Hyperparameters Optimization; printing the trials list and best parameters...")
 print(ax_client.get_trials_data_frame())
 
-best_parameters, values = ax_client.get_best_parameters()
-print("\t[Tuning] Best parameters: ", best_parameters)
+if not optimize_sr:
+    best_parameters, values = ax_client.get_best_parameters()
+    print("\t[Tuning] Best parameters: ", best_parameters)
 
 print("\t[Tuning] Saving the experiment data...")
 current_date = datetime.now()
