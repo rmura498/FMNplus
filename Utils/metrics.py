@@ -95,10 +95,13 @@ def l2_projection(delta, epsilon):
 
 def linf_projection(delta, epsilon):
     """In-place linf projection"""
-    delta = delta.flatten(1)
     epsilon = epsilon.unsqueeze(1)
-    torch.maximum(torch.minimum(delta, epsilon, out=delta), -epsilon, out=delta)
-
+    bool_eps = torch.lt(epsilon, torch.tensor(float('inf')))
+    torch.where(bool_eps,
+                delta,
+                torch.maximum(torch.minimum(delta.flatten(1), epsilon, out=delta),
+                              -epsilon, out=delta),
+                out=delta)
 
 def l0_mid_points(x0, x1, epsilon):
     n_features = x0[0].numel()
