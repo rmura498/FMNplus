@@ -296,12 +296,14 @@ class FMN:
                     epsilon.clamp_(min=0)
                 else:
                     # distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
-                    distance_to_boundary = 4/255
+                    # distance_to_boundary = 4/255
+
+                    # Reminder: we have changed this to set epsilon to 'inf' when adv has not yet been found
                     epsilon = torch.where(is_adv,
                                           torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
                                           torch.where(init_trackers['adv_found'],
                                                       epsilon * (1 + gamma),
-                                                      delta_norm + distance_to_boundary)
+                                                      float('inf'))
                                           )
 
             loss = loss_fn(logits, labels)
@@ -325,8 +327,14 @@ class FMN:
 
             optimizer.step()
 
+            _delta = delta.clone().detach()
             # project in place
+
+            # TODO: re-implement the projection function(s) to take care of adv found (or not)
             projection(delta=delta.data, epsilon=epsilon)
+
+            # TODO: this operation currently does not work - it gives an error on the batch size
+            delta.data = torch.where(init_trackers['adv_found'], delta.data, _delta.data)
             # clamp
             delta.data.add_(images).clamp_(min=0, max=1).sub_(images)
             best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
