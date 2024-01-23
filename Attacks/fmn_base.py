@@ -215,13 +215,13 @@ class FMN:
                 if self.scheduler_name == 'CALR':
                     scheduler = self.scheduler(optimizer, T_max=self.steps, eta_min=self.alpha_final)
                 elif self.scheduler_name == 'RLROPVec':
-                    scheduler = RLROPvec(batch_size=batch_size, verbose=self.verbose, device=self.device)
+                    scheduler = self.scheduler(batch_size=batch_size, verbose=self.verbose, device=self.device)
                 else:
                     scheduler = self.scheduler(optimizer, min_lr=self.alpha_final)
             elif self.scheduler_name != 'RLROPVec':
                 scheduler = self.scheduler(optimizer, **self.scheduler_config)
             else:
-                scheduler = RLROPvec(verbose=self.verbose, device=self.device, **self.scheduler_config)
+                scheduler = self.scheduler(verbose=self.verbose, device=self.device, **self.scheduler_config)
 
         if self.epsilon is not None:
             epsilon = torch.ones(1)*self.epsilon
