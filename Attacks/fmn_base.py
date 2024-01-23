@@ -327,14 +327,15 @@ class FMN:
 
             optimizer.step()
 
-            _delta = delta.clone().detach()
+            # cloning the previoud delta.data (temporay implementation)
+            _delta_data = delta.data.clone()
+
+            # TODO: implement a new in-place projection that performs \
+            #  the operation directly on delta.data (needs adv_found tracker to be passed)
             # project in place
-
-            # TODO: re-implement the projection function(s) to take care of adv found (or not)
             projection(delta=delta.data, epsilon=epsilon)
+            delta.data = torch.where(init_trackers['adv_found'].view(-1, 1, 1, 1), delta.data, _delta_data)
 
-            # TODO: this operation currently does not work - it gives an error on the batch size
-            delta.data = torch.where(init_trackers['adv_found'], delta.data, _delta.data)
             # clamp
             delta.data.add_(images).clamp_(min=0, max=1).sub_(images)
             best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
