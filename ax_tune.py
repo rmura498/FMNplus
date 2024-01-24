@@ -41,7 +41,6 @@ n_trials = int(args.n_trials)
 device = args.device
 cuda_device = int(args.cuda_device)
 fixed_batch = args.fixed_batch
-optimize_sr = args.optimize_sr
 
 if scheduler == 'None': scheduler = None
 
