@@ -267,14 +267,6 @@ class FMN:
             logits = self.model(adv_images)
             pred_labels = logits.argmax(dim=1)
 
-            '''
-            if self.epsilon is None:
-                logit_diffs = logit_diff_func(logits=logits)
-                ll = -(multiplier * logit_diffs)
-                ll.sum().backward(retain_graph=True)
-                delta_grad = delta.grad.data
-            '''
-
             is_adv = (pred_labels == labels) if self.targeted else (pred_labels != labels)
             is_smaller = delta_norm < init_trackers['best_norm']
             is_both = is_adv & is_smaller
@@ -295,10 +287,8 @@ class FMN:
                                           torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
                     epsilon.clamp_(min=0)
                 else:
-                    # distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
-                    # distance_to_boundary = 4/255
-
                     # Reminder: we have changed this to set epsilon to 'inf' when adv has not yet been found
+                    # why? keeping epsilon high enough in order to find adversarial for not yet adversarial points
                     epsilon = torch.where(is_adv,
                                           torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
                                           torch.where(init_trackers['adv_found'],
@@ -335,6 +325,8 @@ class FMN:
             best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
                                               dim=1, ord=self.norm)
 
+            best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(float('inf')))
+
             if self.scheduler is not None:
                 if self.scheduler_name == 'RLROPVec':
                     steps = scheduler.step(loss, learning_rates)
@@ -347,12 +339,16 @@ class FMN:
             self.attack_data['loss'].append(loss.detach().clone().cpu().mean().item())
             self.attack_data['distance'].append(_distance.cpu())
             self.attack_data['epsilon'].append(_epsilon.cpu())
+
+            # TODO: check this line, I don't trust it so much...
             self.attack_data['success_rate'].append(len(is_adv[is_adv == True]) / batch_size)
             self.attack_data['learning_rate'].append(optimizer.param_groups[0]['lr'])
 
             if i == self.steps-1:
+                # TODO: check this line, I don't trust it so much...
                 print(f"SUCCESS RATE: : {len(is_adv[is_adv == True]) * 100 / batch_size:.2f}% ")
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
                 self.attack_data['is_adv'] = is_adv.cpu()
 
-        return init_trackers['best_adv'], best_distance, self.attack_data['success_rate'][-1]
+        # LS: sr (ASR) is no longer returned, simply compute the accuracy of best_adv and then ASR = 1 - acc
+        return init_trackers['best_adv'], best_distance

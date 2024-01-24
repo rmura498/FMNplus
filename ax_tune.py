@@ -25,7 +25,6 @@ parser.add_argument('--n_trials', type=int, default=1, help='How many hyperparam
 parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
 parser.add_argument('--cuda_device', type=int, default=-1, help='Specific gpu to use like -1 (discard gpu selection), 0 or 1')
 parser.add_argument('--fixed_batch', action="store_true", help='Fixed (or variable) batch')
-parser.add_argument('--optimize_sr', action="store_true", help='Optimize min distance and max sr (attack success rate)')
 
 args = parser.parse_args()
 
@@ -75,17 +74,13 @@ def attack_evaluate(parametrization):
         scheduler_config=scheduler_config
     )
 
-    _, best_distance, sr = attack.forward(images=images, labels=labels)
-    best_distance = float(best_distance.mean().item())
-    sr = float(sr)
+    _, best_distance = attack.forward(images=images, labels=labels)
+    best_distance = best_distance.median().item()
 
     if not fixed_batch:
         images, labels = next(iter(dataloader))
 
-    if not optimize_sr:
-        evaluation = {'distance': (best_distance, 0.0)}
-    else:
-        evaluation = {'distance': (best_distance, 0.0), 'sr': (sr, 0.0)}
+    evaluation = {'distance': (best_distance, 0.0)}
 
     return evaluation
 
@@ -128,8 +123,6 @@ else:
 objectives = {
     'distance': ObjectiveProperties(minimize=True, threshold=8/255*2)
 }
-if optimize_sr:
-    objectives['sr'] = ObjectiveProperties(minimize=False, threshold=0.3)
 
 # Create an experiment with required arguments: name, parameters, and objective_name.
 experiment_name = f'mid{model_id}_{batch_size}_{steps}_{n_trials}_{optimizer}_{scheduler}_{loss}_{gradient_update}'
