@@ -74,7 +74,13 @@ def attack_evaluate(parametrization):
         scheduler_config=scheduler_config
     )
 
-    _, best_distance = attack.forward(images=images, labels=labels)
+    best_adv, best_distance = attack.forward(images=images, labels=labels)
+
+    logits = model(best_adv)
+    acc = (logits.cpu().argmax(dim=1) == labels.cpu()).sum().item() / batch_size
+    asr = 1 - acc
+    print(f"ASR check: {asr}")
+
     best_distance = best_distance.median().item()
 
     if not fixed_batch:
