@@ -325,7 +325,7 @@ class FMN:
             best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
                                               dim=1, ord=self.norm)
 
-            best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(float('inf')))
+            best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(1.0))
 
             if self.scheduler is not None:
                 if self.scheduler_name == 'RLROPVec':
