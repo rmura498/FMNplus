@@ -80,7 +80,7 @@ def attack_evaluate(parametrization):
     asr = 1 - acc
     print(f"ASR check: {asr}")
 
-    best_distance = best_distance.median().item()
+    best_distance = float(best_distance.mean().item())
 
     if not fixed_batch:
         images, labels = next(iter(dataloader))
