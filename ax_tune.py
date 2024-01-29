@@ -60,7 +60,7 @@ if not os.path.exists(experiment_name):
 
 
 def attack_evaluate(parametrization):
-    global images, labels, current_date, formatted_date, experiment_name
+    global images, labels, current_date, formatted_date, experiment_name, i
 
     optimizer_config = {k: parametrization[k] for k in set(opt_params)}
     scheduler_config = None
@@ -96,7 +96,7 @@ def attack_evaluate(parametrization):
     evaluation = {'distance': (best_distance, 0.0)}
 
     print("\t[Tuning] Saving the attack data...")
-    attack_data_path = os.path.join(experiment_name, f"{formatted_date}_attackdata_{experiment_name}.pth")
+    attack_data_path = os.path.join(experiment_name, f"{formatted_date}_attackdata_{experiment_name}_trial{i}.pth")
     torch.save(attack.attack_data, attack_data_path)
 
     return evaluation
