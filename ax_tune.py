@@ -1,4 +1,4 @@
-import argparse
+import os, argparse
 from datetime import datetime
 
 import torch
@@ -52,6 +52,11 @@ if device == 'cuda' and cuda_device != -1:
 
 current_date = datetime.now()
 formatted_date = current_date.strftime("%d%m%y%H")
+experiment_name = f'mid{model_id}_{batch_size}_{steps}_{n_trials}_{optimizer}_{scheduler}_{loss}_{gradient_update}'
+
+# Creating a folder for the current tuning
+if not os.path.exists(experiment_name):
+    os.makedirs(experiment_name, exist_ok=True)
 
 
 def attack_evaluate(parametrization):
@@ -91,7 +96,8 @@ def attack_evaluate(parametrization):
     evaluation = {'distance': (best_distance, 0.0)}
 
     print("\t[Tuning] Saving the attack data...")
-    torch.save(attack.attack_data, f"{formatted_date}_attackdata_{experiment_name}.pth")
+    attack_data_path = os.path.join(experiment_name, f"{formatted_date}_attackdata_{experiment_name}.pth")
+    torch.save(attack.attack_data, attack_data_path)
 
     return evaluation
 
@@ -136,7 +142,6 @@ objectives = {
 }
 
 # Create an experiment with required arguments: name, parameters, and objective_name.
-experiment_name = f'mid{model_id}_{batch_size}_{steps}_{n_trials}_{optimizer}_{scheduler}_{loss}_{gradient_update}'
 ax_client.create_experiment(
     name=experiment_name,
     parameters=params,
@@ -156,4 +161,5 @@ best_parameters, values = ax_client.get_best_parameters()
 print("\t[Tuning] Best parameters: ", best_parameters)
 
 print("\t[Tuning] Saving the experiment data...")
-ax_client.save_to_json_file(filepath=f'{formatted_date}_{experiment_name}.json')
+exp_json_path = os.path.join(experiment_name, f'{formatted_date}_{experiment_name}.json')
+ax_client.save_to_json_file(filepath=exp_json_path)
