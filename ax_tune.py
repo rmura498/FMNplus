@@ -50,9 +50,12 @@ if not torch.cuda.is_available():
 if device == 'cuda' and cuda_device != -1:
     device = 'cuda:' + str(cuda_device)
 
+current_date = datetime.now()
+formatted_date = current_date.strftime("%d%m%y%H")
+
 
 def attack_evaluate(parametrization):
-    global images, labels
+    global images, labels, current_date, formatted_date, experiment_name
 
     optimizer_config = {k: parametrization[k] for k in set(opt_params)}
     scheduler_config = None
@@ -86,6 +89,9 @@ def attack_evaluate(parametrization):
         images, labels = next(iter(dataloader))
 
     evaluation = {'distance': (best_distance, 0.0)}
+
+    print("\t[Tuning] Saving the attack data...")
+    torch.save(attack.attack_data, f"{formatted_date}_attackdata_{experiment_name}.pth")
 
     return evaluation
 
@@ -150,6 +156,4 @@ best_parameters, values = ax_client.get_best_parameters()
 print("\t[Tuning] Best parameters: ", best_parameters)
 
 print("\t[Tuning] Saving the experiment data...")
-current_date = datetime.now()
-formatted_date = current_date.strftime("%d%m%y%H")
 ax_client.save_to_json_file(filepath=f'{formatted_date}_{experiment_name}.json')
