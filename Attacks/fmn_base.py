@@ -350,5 +350,7 @@ class FMN:
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
                 self.attack_data['is_adv'] = is_adv.cpu()
 
+        self.attack_data['best_adv'] = init_trackers['best_adv'].clone().cpu()
+
         # LS: sr (ASR) is no longer returned, simply compute the accuracy of best_adv and then ASR = 1 - acc
         return init_trackers['best_adv'], best_distance
