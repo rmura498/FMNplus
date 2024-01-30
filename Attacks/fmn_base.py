@@ -324,10 +324,8 @@ class FMN:
 
             # clamp
             delta.data.add_(images).clamp_(min=0, max=1).sub_(images)
-            best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
-                                              dim=1, ord=self.norm)
-
-            best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(float('inf')))
+            # best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
+            #                                   dim=1, ord=self.norm)
 
             if self.scheduler is not None:
                 if self.scheduler_name == 'RLROPVec':
@@ -357,6 +355,8 @@ class FMN:
 
         self.attack_data['best_distance'] = best_distance.median().cpu().item()
         self.attack_data['best_adv'] = init_trackers['best_adv'].clone().cpu()
+
+        best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(float('inf')))
 
         # LS: sr (ASR) is no longer returned, simply compute the accuracy of best_adv and then ASR = 1 - acc
         return init_trackers['best_adv'], best_distance
