@@ -3,7 +3,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-
+from Utils.compute_robust import compute_robust
 # from Utils.metrics import compute_robust
 
 
@@ -56,14 +56,12 @@ def plot_distance():
 
 
 def plot_epsilon_robust(distance,
-                        best_distances, aa_robust):
+                        best_distances, aa_robust=1):
     if len(distance) == 0:
         print("Error: Not enough distances per experiment!")
         return
 
-    fig, ax = plt.figure(figsize=(3,3))
-
-
+    fig, ax = plt.subplots()
     # single experiment
     steps = len(distance)
 
@@ -75,7 +73,7 @@ def plot_epsilon_robust(distance,
 
     ax.plot(distances,
             robust_per_iter)
-    ax.plot(8/255, aa_robust, 'x', label='AA')
+    #ax.plot(8/255, aa_robust, 'x', label='AA')
     ax.grid()
 
     dpi = fig.dpi
