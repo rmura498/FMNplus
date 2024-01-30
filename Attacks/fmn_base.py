@@ -180,6 +180,8 @@ class FMN:
 
         adv_images = images.clone().detach()
 
+        self.attack_data['images'] = images.clone().detach().cpu()
+
         if batch_size is None:
             batch_size = len(images)
 
@@ -350,6 +352,10 @@ class FMN:
                 print(f" {len(is_adv[is_adv == True])} out of {batch_size} successfully perturbed")
                 self.attack_data['is_adv'] = is_adv.cpu()
 
+        best_distance = torch.linalg.norm((init_trackers['best_adv'] - images).data.flatten(1),
+                                          dim=1, ord=self.norm).clone().detach().cpu()
+
+        self.attack_data['best_distance'] = best_distance.median().cpu().item()
         self.attack_data['best_adv'] = init_trackers['best_adv'].clone().cpu()
 
         # LS: sr (ASR) is no longer returned, simply compute the accuracy of best_adv and then ASR = 1 - acc
