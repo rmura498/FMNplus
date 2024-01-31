@@ -181,6 +181,7 @@ class FMN:
         adv_images = images.clone().detach()
 
         self.attack_data['images'] = images.clone().detach().cpu()
+        self.attack_data['labels'] = labels.clone().detach().cpu()
 
         if batch_size is None:
             batch_size = len(images)
