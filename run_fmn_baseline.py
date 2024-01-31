@@ -10,8 +10,8 @@ from Utils.load_model import load_data
 parser = argparse.ArgumentParser(description="Run FMN Baseline attacks")
 
 parser.add_argument('--model_id', type=int, default=8, help='Robustbench model\'s id')
-parser.add_argument('--batch_size', type=int, default=25, help='Size of a single batch')
-parser.add_argument('--n_batches', type=int, default=4, help='N batches')
+parser.add_argument('--batch_size', type=int, default=128, help='Size of a single batch')
+parser.add_argument('--n_batches', type=int, default=32, help='N batches')
 parser.add_argument('--shuffle', action="store_true", help='Shuffle samples of each batch')
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD', 'Adamax'], help='Optimizer for the attack')
 parser.add_argument('--scheduler', type=str, default=None, choices=['RLROPVec', 'CALR', 'None'],  help='Scheduler for the attack')
@@ -47,6 +47,10 @@ if not torch.cuda.is_available():
 if device == 'cuda' and cuda_device != -1:
     device = 'cuda:' + str(cuda_device)
 
+if use_tuning_batch:
+    batch_size = 128
+    n_batches = 32
+
 current_date = datetime.now()
 formatted_date = current_date.strftime("%d%m%y%H")
 experiment_name = f'FMN_attack_mid{model_id}_{batch_size}_{steps}_{optimizer}_{scheduler}_{loss}_{gradient_update}_baseline'
@@ -78,7 +82,7 @@ def attack_evaluate(images, labels, i):
     asr = 1 - acc
     print(f"ASR check: {asr}")
 
-    print("\t[FMN] Saving the attack data...")
+    print("\t\t[FMN] Saving the attack data...")
     attack_data_path = os.path.join(experiment_name, f"{formatted_date}_attackdata_{experiment_name}_batch{i}.pth")
     torch.save(attack.attack_data, attack_data_path)
 
@@ -90,8 +94,11 @@ model.eval()
 model = model.to(device)
 
 if not use_tuning_batch:
-    subset_indices = list(range(128*32, 128*32 + batch_size))
-    dataset = torch.utils.data.Subset(dataset, subset_indices)
+    subset_indices = list(range(128*32, 128*32 + batch_size*n_batches))
+else:
+    subset_indices = list(range(0, 128*32))
+
+print(f"Samples: {len(subset_indices)}")
 
 dataloader = DataLoader(
     dataset=dataset,
@@ -105,3 +112,8 @@ for i, data in enumerate(dataloader):
 
     images, labels = data
     attack_evaluate(images, labels, i)
+
+    if i >= n_batches-1:
+        break
+
+print("\t[FMN] All batches completed")
