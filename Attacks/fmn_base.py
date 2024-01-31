@@ -186,6 +186,8 @@ class FMN:
             batch_size = len(images)
 
         dual, projection, _ = self._dual_projection_mid_points[self.norm]
+
+        # FYI: batch_view reshapes the tensor as (batch_size, 1, 1, 1, ...) depending on images.ndim
         batch_view = lambda tensor: tensor.view(batch_size, *[1] * (images.ndim - 1))
 
         epsilon, delta, is_adv = self._initialization(images, labels, batch_size)
