@@ -8,7 +8,7 @@ import torch
 from torch import inf
 
 if __name__ == '__main__':
-    file_path = 'SchedulerVecExps/FMN_AA_lossData_051223_Adam_steps40_batch50.pkl'
+    file_path = '../SchedulerVecExps/FMN_AA_lossData_051223_Adam_steps40_batch50.pkl'
 
     with open(file_path, 'rb') as file:
         loss_data = pickle.load(file)

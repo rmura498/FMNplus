@@ -45,5 +45,6 @@ def main(model_folder=None):
         with open(f'Experiments/201213_mid1/{new_filename}', 'wb') as f:
             pickle.dump(attack_data, f)
 
+
 if __name__ == '__main__':
     main()
