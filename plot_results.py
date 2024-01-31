@@ -193,9 +193,9 @@ def plot_model_results(folder=None, model_id='1'):
     ax[2].set_ylabel('LL Losses')
     ax[2].legend()
 
-    plt.savefig('14122310_mid8.pdf')
+    plt.savefig('14122310_mid10.pdf')
 
     plt.show()
 
 
-plot_model_results(folder='14122310_mid8', model_id='8')
+plot_model_results(folder='14122317_mid10', model_id='10')

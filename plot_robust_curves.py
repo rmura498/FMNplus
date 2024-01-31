@@ -24,7 +24,7 @@ def extract_data(path, trial_list):
 
 
 def plot_robust():
-    best_config_dict = extract_data(path='mid8_short_exps/', trial_list=[31,31,31,29,31])
+    best_config_dict = extract_data(path='mid8_short_exps/', trial_list=[31,31,31,31,3])
 
     nrows = 2
     ncols = 3

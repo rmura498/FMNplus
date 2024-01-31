@@ -4,7 +4,6 @@ import pathlib
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import scienceplots
 import argparse
 
 # plt.style.use(['science','ieee'])
@@ -19,8 +18,8 @@ models = tuple({'_'.join(f.name.split('_')[:2])
 models = sorted(models)
 
 # change this values
-nrows = 1
-ncols = 4
+nrows = 2
+ncols = 3
 figure, axes = plt.subplots(nrows, ncols, figsize=(12, 3), sharex=True, sharey=True)
 
 for idx, model in enumerate(models):
