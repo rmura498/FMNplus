@@ -21,7 +21,6 @@ parser.add_argument('--norm', type=float, default=float('inf'), help='Type of no
 parser.add_argument('--gradient_update', type=str, default='Sign', choices=['Normalization', 'Projection', 'Sign'], help='Attack\'s gradient update strategy')
 parser.add_argument('--device', type=str, default='cpu', choices=['cuda', 'cpu'], help='Device to use (cpu, cuda:0, cuda:1)')
 parser.add_argument('--cuda_device', type=int, default=-1, help='Specific gpu to use like -1 (discard gpu selection), 0 or 1')
-parser.add_argument('--use_tuning_batch', action="store_true", help='Tuning samples or not')
 
 args = parser.parse_args()
 
@@ -37,7 +36,6 @@ norm = float(args.norm)
 gradient_update = args.gradient_update
 device = args.device
 cuda_device = int(args.cuda_device)
-use_tuning_batch = args.use_tuning_batch
 
 if scheduler == 'None': scheduler = None
 
@@ -47,13 +45,9 @@ if not torch.cuda.is_available():
 if device == 'cuda' and cuda_device != -1:
     device = 'cuda:' + str(cuda_device)
 
-if use_tuning_batch:
-    batch_size = 128
-    n_batches = 32
-
 current_date = datetime.now()
 formatted_date = current_date.strftime("%d%m%y%H")
-experiment_name = f'FMN_attack_mid{model_id}_{batch_size}_{steps}_{optimizer}_{scheduler}_{loss}_{gradient_update}_baseline'
+experiment_name = f'FMN_attack_mid{model_id}_{batch_size}_{steps}_{optimizer}_{scheduler}_{loss}_{gradient_update}_bestconfig'
 
 # Creating a folder for the current tuning
 if not os.path.exists(experiment_name):
@@ -93,10 +87,7 @@ model, dataset, model_name, dataset_name = load_data(model_id=model_id)
 model.eval()
 model = model.to(device)
 
-if not use_tuning_batch:
-    subset_indices = list(range(128*32, 128*32 + batch_size*n_batches))
-else:
-    subset_indices = list(range(0, 128*32))
+subset_indices = list(range(128*32, 128*32 + batch_size*n_batches))
 
 print(f"Samples: {len(subset_indices)}")
 
