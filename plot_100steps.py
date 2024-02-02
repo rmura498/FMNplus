@@ -1,22 +1,21 @@
-import math, pathlib
+import os, pathlib
 
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-aa_acc = [70.69, 67.31, 66.11, 63.44, 63.35, 62.79, 61.04, 58.50]
+aa_acc = [70.69, 67.31, 66.10, 64.58, 63.38, 63.35, 62.79, 61.04, 58.50]
 
-from ax.service.ax_client import AxClient
-
-data_dir = pathlib.Path(f'results/1000steps/baseline_attacks')
-models = tuple({f for f in data_dir.glob('*') if f.is_dir()})
+data_dir = pathlib.Path(f'./Experiments/baseline_attacks')
+models = tuple({f for f in data_dir.glob('*') if (f.is_dir() and 'mid' in f.name)})
 models = sorted(models)
+
 print(models)
 
 # change this values
-nrows = 2
-ncols = 4
-figure, axes = plt.subplots(nrows, ncols, figsize=(20,12), sharex=True, sharey=True)
+nrows = 3
+ncols = 3
+figure, axes = plt.subplots(nrows, ncols, figsize=(20,16), sharex=True, sharey=True)
 
 for idx, model in enumerate(models):
     batches = [f for f in model.glob('*')]
@@ -25,6 +24,7 @@ for idx, model in enumerate(models):
     inputs = None
     for batch in batches[:len(batches)]:
         attack_data = torch.load(batch, map_location='cpu')
+
         _best_advs = attack_data['best_adv']
         _inputs = attack_data['images']
 
@@ -45,8 +45,7 @@ for idx, model in enumerate(models):
 
     ax = axes.flatten()[idx]
     ax.scatter(8/255, aa_acc[idx]/100, label='AA', marker='+', color='green', zorder=3)
-    ax.text(8 / 255 + 0.01, aa_acc[idx]/100, f'{aa_acc[idx]/100:.3f}', fontsize=12, verticalalignment='center', color='#EE004D')
-    # TODO: add AA point as the baseline/reference
+    ax.text(8 / 255 + 0.01, aa_acc[idx]/100, f'{aa_acc[idx]/100:.3f}', fontsize=16, verticalalignment='center', color='#EE004D')
 
     #print(f"{norms[0]*100:.1f}")
     print(f"acc: {acc*100:.1f}")
@@ -59,11 +58,15 @@ for idx, model in enumerate(models):
 
     ax.axvline(x=8/255, color='#5DA271', linewidth=1, linestyle='--')
     ax.scatter(8/255, rob_acc, color='#EE6C4D', marker='*', label='FMN_b', zorder=3, s=30)
-    ax.text(8/255 + 0.01, rob_acc, f'{rob_acc:.3f}', fontsize=12, verticalalignment='center', color='#EE6C4D')
+    ax.text(8/255 + 0.01, rob_acc+0.04, f'{rob_acc:.3f}', fontsize=16, verticalalignment='center', color='#EE6C4D')
     ax.legend()
 
-figure.tight_layout(pad=1.5)
-figure.text(0.5, 0.01, r'Perturbation $||\delta^*||$', ha='center', fontsize='large')
+figure.tight_layout(pad=2.0)
+figure.text(0.5, 0.001, r'Perturbation $||\delta^*||$', ha='center', fontsize='large')
 figure.text(0.001, 0.5, 'Robust Accuracy', va='center', rotation='vertical', fontsize='large')
 
-plt.savefig(f"fmn_attack_exps_1000samples_1000steps.pdf", bbox_inches='tight', dpi=320)
+plot_path = './Experiments/baseline_attacks/plots'
+if not os.path.exists(plot_path):
+    os.makedirs(plot_path, exist_ok=True)
+
+plt.savefig(f"{plot_path}/fmn_attack_exps_1000samples_1000steps.pdf", bbox_inches='tight', dpi=320)
