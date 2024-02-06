@@ -12,35 +12,14 @@ model = ax_client.generation_strategy._curr.model(
     **ax_client.generation_strategy._curr.model_kwargs
 )
 ax_client.get_next_trial()
-data =list(interact_contour(model=model, metric_name='distance', lower_is_better=True))
-Z = data[1]
-X = data[3]
-Y = data[4]
+data = list(interact_contour(model=model, metric_name='distance', lower_is_better=True))
 
-print(X.shape)
-print(Y.shape)
+x = data[0]['data'][0]['x'][:]
+y = data[0]['data'][0]['y'][:]
+z = data[0]['data'][0]['z'][:]
 
-print(Z.shape)
+[X, Y] = np.meshgrid(x, y)
 
-exit(0)
-params_dict = {}
-for i in range(32):
-    params = ax_client.get_trial_parameters(i)
-    params_dict[f'{i}'] = params
-
-# print(params_dict)
-feature_x = np.array([params_dict[f'{i}']['lr'] for i in range(32)])
-feature_y = np.array([params_dict[f'{i}']['momentum'] for i in range(32)])
-Z = np.array(ax_client.get_trace())  # median distance
-[X, Y] = np.meshgrid(feature_x, feature_y)
-X = X.flatten()
-Y = Y.flatten()
-print(X.shape)
-print(Y.shape)
-
-print(Z.shape)
-plt.contour(X, Y, Z, levels=10)
+plt.contour(X, Y, z, levels=4)
 plt.colorbar()
 plt.show()
-
-# plt.contourf(h, levels[.,.,.])
