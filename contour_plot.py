@@ -18,8 +18,23 @@ x = data[0]['data'][0]['x'][:]
 y = data[0]['data'][0]['y'][:]
 z = data[0]['data'][0]['z'][:]
 
-[X, Y] = np.meshgrid(x, y)
+params_dict = {}
+for i in range(32):
+    params = ax_client.get_trial_parameters(i)
+    params_dict[f'{i}'] = params
 
-plt.contour(X, Y, z, levels=4)
+# print(params_dict)
+feature_x = np.array([params_dict[f'{i}']['lr'] for i in range(32)])
+feature_y = np.array([params_dict[f'{i}']['momentum'] for i in range(32)])
+Z = np.array(ax_client.get_trace())  # median distance
+
+[X, Y] = np.meshgrid(feature_x, feature_y)
+X = X.flatten()
+Y = Y.flatten()
+print(X.shape)
+print(Y.shape)
+print(Z.shape)
+plt.contour(X, Y, Z, levels=10)
 plt.colorbar()
 plt.show()
+
