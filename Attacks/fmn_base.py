@@ -228,10 +228,6 @@ class FMN:
             else:
                 scheduler = self.scheduler(verbose=self.verbose, device=self.device, **self.scheduler_config)
 
-        if self.epsilon is not None:
-            epsilon = torch.ones(1)*self.epsilon
-            epsilon = epsilon.to(self.device)
-
         if self.loss == 'CE':
             c_loss = nn.CrossEntropyLoss(reduction='none')
             loss_fn = lambda logits, labels: -c_loss(logits, labels)

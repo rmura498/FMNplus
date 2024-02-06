@@ -23,7 +23,7 @@ def evaluate_strategies(batch_size=10):
     df_columns = ['Strategies - [Opt-Sch-Loss-Grad-Init]']
     BIG_DF = pd.DataFrame(columns=df_columns+sample_columns+['winner'])
 
-    path = '../Experiments/Sehwag2021Proxy_ResNest152/cifar10/'
+    path = '../Experiments/Gowal2021Improving_R18_ddpm_100m_test_easing_out/cifar10'
     filenames = os.listdir(path)
 
     for i, filename in enumerate(filenames):
@@ -48,7 +48,7 @@ def evaluate_strategies(batch_size=10):
 
         BIG_DF.loc[i] = [strategy] + min_distances + [0]
     min_values = BIG_DF.min()
-    with open("min_comparison_latex2.txt", "w+") as file:
+    with open("Gowal2021Improving_R18_ddpm_100m_min_comparison_231123_test_easing_out.txt", "w+") as file:
         latex_string = min_values.to_latex()
         file.writelines(latex_string)
     print(min_values)
@@ -61,10 +61,11 @@ def evaluate_strategies(batch_size=10):
     # Display the updated DataFrame
     #with open("comparison.csv", "w+") as file:
     #    file.writelines(BIG_DF.to_csv(index=False, float_format='%.7f'))
-    with open("tuning_comparison_latex2.txt", "w+") as file:
+    with open("Gowal2021Improving_R18_ddpm_100m_comparison_231123_test_easing_out.txt", "w+") as file:
         latex_string = BIG_DF.to_latex()
         file.writelines(latex_string)
 
 
+if __name__=='__main__':
+    evaluate_strategies(batch_size=10)
 
-evaluate_strategies(batch_size=2)

@@ -1,6 +1,8 @@
 import os
 
 import torchvision
+import torchvision.transforms as transforms
+
 from filelock import FileLock
 from robustbench.utils import load_model as rb_load_model
 
@@ -8,17 +10,27 @@ from config import MODEL_NORMS, MODEL_DATASET
 
 
 def load_dataset(dataset_name='cifar10'):
+    '''
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    '''
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+
     if dataset_name == 'mnist':
         dataset = torchvision.datasets.MNIST('./Models/data',
                                              train=False,
                                              download=True,
-                                             transform=torchvision.transforms.ToTensor())
+                                             transform=transform)
     elif dataset_name == 'cifar10':
         with FileLock(os.path.expanduser("~/.data.lock")):
             dataset = torchvision.datasets.CIFAR10('./Models/data',
                                                    train=False,
                                                    download=True,
-                                                   transform=torchvision.transforms.ToTensor())
+                                                   transform=transform)
 
     return dataset
 

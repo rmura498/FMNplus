@@ -209,12 +209,13 @@ class FMN:
                     labels_infhot=labels_infhot
                 )
 
-            logit_diffs = logit_diff_func(logits=logits)
-            ll = -(multiplier * logit_diffs)
-            ll.sum().backward(retain_graph=True)
-            delta_grad = delta.grad.data
+                logit_diffs = logit_diff_func(logits=logits)
+                ll = -(multiplier * logit_diffs)
+                ll.sum().backward()
+                delta_grad = delta.grad.data
 
             if self.loss == 'LL':
+                logit_diffs = logit_diff_func(logits=logits)
                 loss = -(multiplier * logit_diffs)
 
             elif self.loss == 'CE':
@@ -244,7 +245,7 @@ class FMN:
                                                     init_trackers['best_norm']),
                                       torch.maximum(epsilon + 1, (epsilon * (1 + gamma)).floor_()))
                 epsilon.clamp_(min=0)
-            else:
+            elif i == 0:
                 distance_to_boundary = ll.detach().abs() / delta_grad.flatten(1).norm(p=dual, dim=1).clamp_(min=1e-12)
                 epsilon = torch.where(is_adv,
                                       torch.minimum(epsilon * (1 - gamma), init_trackers['best_norm']),
@@ -252,6 +253,7 @@ class FMN:
                                                   epsilon * (1 + gamma),
                                                   delta_norm + distance_to_boundary)
                                       )
+                continue
 
             #optimizer.zero_grad() da capire se lasciare o no
             loss.sum().backward()

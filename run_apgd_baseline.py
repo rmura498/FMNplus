@@ -72,10 +72,13 @@ def attack_evaluate(images, labels, i):
     # running autoattack
     adversary = AutoAttack(model, norm='Linf', version='standard', device=device)
     adversary.attacks_to_run = AA_attack_to_run
-    adversary.apgd.n_restarts = 5
+    adversary.apgd.n_restarts = 1
     adversary.apgd.n_iter = steps
 
     best_adv = adversary.run_standard_evaluation(images, labels, bs=batch_size)
+    norms = (best_adv.cpu() - images.cpu()).flatten(1).norm(torch.inf, dim=1)
+    rob = (norms > 8/255).float().mean()
+    print(rob)
     logits = model(best_adv)
     acc = (logits.cpu().argmax(dim=1) == labels.cpu()).sum().item() / batch_size
     asr = 1 - acc
@@ -113,7 +116,7 @@ scheduler_config = None
 
 print("\t[APGD] Starting the attack...")
 for i, data in enumerate(dataloader):
-    print(f"\t[FMN] Running batch {i}")
+    print(f"\t[APGD] Running batch {i}")
 
     images, labels = data
     attack_evaluate(images, labels, i)

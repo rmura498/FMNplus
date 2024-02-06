@@ -2,7 +2,9 @@ import os, pickle, math, argparse
 
 import torch
 
-from Attacks.fmn import FMN
+from Attacks.fmn_single_distance_estimation import FMN as FMN_single_dist_est
+from Attacks.fmn_base import FMN as FMN_base
+from Attacks.fmn_base_test import FMN as FMN_base_test
 from Utils.load_model import load_dataset, load_model, load_data
 from Utils.plots import plot_distance
 from Utils.fmn_strategies import fmn_strategies
@@ -23,9 +25,12 @@ FMN parametric strategy
 """
 
 parser = argparse.ArgumentParser(description='Perform multiple attacks using FMN+, a parametric version of FMN.')
-parser.add_argument('-mn', '--model_numbers',
+parser.add_argument('-f_mid', '--first_mid',
                     default=0,
-                    help='How many models you want to test.')
+                    help='The first model id to test.')
+parser.add_argument('-m_num', '--models_number',
+                    default=1,
+                    help='How many models to test.')
 parser.add_argument('-s', '--steps',
                     default=30,
                     help='Provide the number of steps of a single attack.')
@@ -33,12 +38,14 @@ parser.add_argument('-bs', '--batch_size',
                     default=10,
                     help='Provide the batch size.')
 
+parser.add_argument('-en', '--exp_name', default='base')
+
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def run_experiments(model_id=0, steps=30, batch_size=10):
+def run_experiments(model_id=0, steps=30, batch_size=10, exp_name='base'):
     # model definition
     model, dataset, model_name, dataset_name = load_data(model_id=model_id)
     model.eval()
@@ -73,38 +80,100 @@ def run_experiments(model_id=0, steps=30, batch_size=10):
     print("clean accuracy", clean_acc)
     # print(labels)
 
-    for i in range(len(fmn_dict)):
-        print(i)
-        print("Running:", fmn_dict[str(i)])
-        attack = FMN(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
-                     scheduler=fmn_dict[str(i)]['scheduler'], gradient_strategy=fmn_dict[str(i)]['gradient_strategy'],
-                     initialization_strategy=fmn_dict[str(i)]['initialization_strategy'], device=device)
+    attack_type = FMN_base_test
+    def first_strategies():
+        for i in range(len(fmn_dict)//2):
+            print(i)
+            print("Running:", fmn_dict[str(i)])
+            attack = attack_type(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
+                         scheduler=fmn_dict[str(i)]['scheduler'], gradient_strategy=fmn_dict[str(i)]['gradient_strategy'],
+                         initialization_strategy=fmn_dict[str(i)]['initialization_strategy'], device=device)
+            adv_x, best_distance = attack.forward(samples, labels)
+
+            robust_acc = clean_accuracy(model, adv_x, labels, device=device)
+            print(f"Robust Accuracy:{fmn_dict[str(i)]}", robust_acc)
+            attack_data = attack.attack_data
+
+            current_exp_dir = os.path.join(EXP_DIRECTORY, f"{model_name}_{str(attack_type.__class__.__name__)}", dataset_name)
+            if not os.path.exists(current_exp_dir): os.makedirs(current_exp_dir)
+            filename = os.path.join(current_exp_dir,
+                                    f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-'
+                                    f'{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}-'
+                                    f'{fmn_dict[str(i)]["initialization_strategy"]}.pkl')
+            # Save the object to a pickle file
+            with open(filename, 'wb') as file:
+                pickle.dump(attack_data, file)
+
+    def second_strategies():
+        for i in range(len(fmn_dict) // 2, len(fmn_dict)):
+            print(i)
+            print("Running:", fmn_dict[str(i)])
+            attack = attack_type(model, steps=steps, loss=fmn_dict[str(i)]['loss'], optimizer=fmn_dict[str(i)]['optimizer'],
+                         scheduler=fmn_dict[str(i)]['scheduler'],
+                         gradient_strategy=fmn_dict[str(i)]['gradient_strategy'],
+                         initialization_strategy=fmn_dict[str(i)]['initialization_strategy'], device=device)
+            adv_x, best_distance = attack.forward(samples, labels)
+
+            robust_acc = clean_accuracy(model, adv_x, labels, device=device)
+            print(f"Robust Accuracy:{fmn_dict[str(i)]}", robust_acc)
+            attack_data = attack.attack_data
+
+            current_exp_dir = os.path.join(EXP_DIRECTORY, f"{model_name}_{exp_name}", dataset_name, )
+            if not os.path.exists(current_exp_dir): os.makedirs(current_exp_dir)
+            filename = os.path.join(current_exp_dir,
+                                    f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-'
+                                    f'{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}-'
+                                    f'{fmn_dict[str(i)]["initialization_strategy"]}.pkl')
+            # Save the object to a pickle file
+            with open(filename, 'wb') as file:
+                pickle.dump(attack_data, file)
+
+    def run_single_strategy(strategy):
+        print("Running:", strategy)
+        attack = attack_type(model, steps=steps, loss=strategy['loss'], optimizer=strategy['optimizer'],
+                             scheduler=strategy['scheduler'],
+                             gradient_strategy=strategy['gradient_strategy'],
+                             initialization_strategy=strategy['initialization_strategy'], device=device)
         adv_x, best_distance = attack.forward(samples, labels)
 
         robust_acc = clean_accuracy(model, adv_x, labels, device=device)
-        print(f"Robust Accuracy:{fmn_dict[str(i)]}", robust_acc)
+        print(f"Robust Accuracy:{strategy}", robust_acc)
         attack_data = attack.attack_data
 
-        current_exp_dir = os.path.join(EXP_DIRECTORY, model_name, dataset_name)
+        current_exp_dir = os.path.join(EXP_DIRECTORY, f"{model_name}_{exp_name}",
+                                       dataset_name, )
         if not os.path.exists(current_exp_dir): os.makedirs(current_exp_dir)
         filename = os.path.join(current_exp_dir,
-                                f'{fmn_dict[str(i)]["optimizer"]}-{fmn_dict[str(i)]["scheduler"]}-'
-                                f'{fmn_dict[str(i)]["loss"]}-{fmn_dict[str(i)]["gradient_strategy"]}-'
-                                f'{fmn_dict[str(i)]["initialization_strategy"]}.pkl')
+                                f'{strategy["optimizer"]}-{strategy["scheduler"]}-'
+                                f'{strategy["loss"]}-{strategy["gradient_strategy"]}-'
+                                f'{strategy["initialization_strategy"]}.pkl')
         # Save the object to a pickle file
         with open(filename, 'wb') as file:
             pickle.dump(attack_data, file)
 
+    import threading
+
+    workers = []
+    for i in range(len(fmn_dict)):
+        t = threading.Thread(target=run_single_strategy, args=(fmn_dict[str(i)],))
+        t.start()
+        workers.append(t)
+        break
+
+    for w in workers:
+        w.join()
     # evaluate_strategies(batch_size)
 
 
 if __name__ == '__main__':
-    model_numbers = int(args.model_numbers)
+    first_mid = int(args.first_mid)
+    models_number = int(args.models_number)
     steps = int(args.steps)
     batch_size = int(args.batch_size)
+    exp_name = args.exp_name
 
-    if model_numbers > len(MODEL_DATASET.keys()):
-        model_numbers = len(MODEL_DATASET.keys())
+    if first_mid+models_number > len(MODEL_DATASET.keys()):
+        models_number = len(MODEL_DATASET.keys()) - (first_mid+models_number)
 
-    for i in range(6, 8):
-        run_experiments(model_id=i, steps=steps, batch_size=batch_size)
+    for i in range(first_mid, first_mid+models_number):
+        run_experiments(model_id=i, steps=steps, batch_size=batch_size, exp_name=exp_name)

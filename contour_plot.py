@@ -1,10 +1,11 @@
-import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from ax.service.ax_client import AxClient
-from ax.plot.contour import interact_contour
+from matplotlib.ticker import ScalarFormatter
 
-path = 'tuning_results/ax_tuning_jan24/mid7/31012406_mid7_128_200_32_SGD_CALR_DLR_Sign.json'
+from ax.service.ax_client import AxClient
+from ax.plot.contour import plot_contour_plotly
+
+path = r"Tuning/AxTuning/exps/mid7_128_200_32_SGD_CALR_DLR_Sign/31012406_mid7_128_200_32_SGD_CALR_DLR_Sign.json"
 ax_client = AxClient(verbose_logging=False).load_from_json_file(filepath=path)
 model = ax_client.generation_strategy._curr.model(
     experiment=ax_client.experiment,
@@ -12,29 +13,44 @@ model = ax_client.generation_strategy._curr.model(
     **ax_client.generation_strategy._curr.model_kwargs
 )
 ax_client.get_next_trial()
-data = list(interact_contour(model=model, metric_name='distance', lower_is_better=True))
 
-x = data[0]['data'][0]['x'][:]
-y = data[0]['data'][0]['y'][:]
-z = data[0]['data'][0]['z'][:]
+# import ipdb; ipdb.set_trace()
 
-params_dict = {}
-for i in range(32):
-    params = ax_client.get_trial_parameters(i)
-    params_dict[f'{i}'] = params
+param_x = 'lr'
+param_y = 'momentum'
 
-# print(params_dict)
-feature_x = np.array([params_dict[f'{i}']['lr'] for i in range(32)])
-feature_y = np.array([params_dict[f'{i}']['momentum'] for i in range(32)])
-Z = np.array(ax_client.get_trace())  # median distance
+best_params = ax_client.get_best_parameters()
+best_params = best_params[0]
+best_point = (best_params[param_y], best_params[param_x])
 
-[X, Y] = np.meshgrid(feature_x, feature_y)
-X = X.flatten()
-Y = Y.flatten()
-print(X.shape)
-print(Y.shape)
-print(Z.shape)
-plt.contour(X, Y, Z, levels=10)
-plt.colorbar()
+print(f"Best point: {best_point}")
+
+# plotly returns a Figure object, you can access plots' data through data.data (kinda the list of plots' data)
+data = plot_contour_plotly(
+    model=model,
+    param_x=param_x,
+    param_y=param_y,
+    metric_name='distance',
+    lower_is_better=True)
+
+plots_data = data.data
+mean_contour = plots_data[0]
+scatter_plot = data.data[-1]
+
+plt.contourf(mean_contour.x, mean_contour.y, mean_contour.z, levels=15, cmap='Blues')
+plt.contour(mean_contour.x, mean_contour.y, mean_contour.z, levels=15, colors='black', linewidths=0.5)
+plt.scatter(scatter_plot.x, scatter_plot.y, color='#46596a', marker='s')
+
+plt.scatter(1.0, 0.0, color='red', marker='s')
+plt.scatter(best_point[0], best_point[1], color='green', marker='s', zorder=10)
+
+plt.xlim(8/255, 10)
+plt.ylim(0.0, 0.9)
+plt.xscale('log')
+plt.gca().xaxis.set_major_formatter(ScalarFormatter())
+
+plt.xlabel(param_x)
+plt.ylabel(param_y)
+
 plt.show()
 

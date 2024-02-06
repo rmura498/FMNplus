@@ -29,7 +29,7 @@ for idx, conf in enumerate(confs):
     print(f"\tBest trial is: {best_trial}\nWith best params: {best_params}\nAnd best dist: {best_params}")
 
     # Saving experiment report
-    html_report = ax_client_restored.
+    #html_report = ax_client_restored.
 
 
     # Retrieve best trial pth for current conf
