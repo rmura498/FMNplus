@@ -21,7 +21,7 @@ param_y = 'momentum'
 
 best_params = ax_client.get_best_parameters()
 best_params = best_params[0]
-best_point = (best_params[param_y], best_params[param_x])
+best_point = (best_params[param_x], best_params[param_y])
 
 print(f"Best point: {best_point}")
 
