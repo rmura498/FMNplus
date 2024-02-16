@@ -171,8 +171,8 @@ for model in models:
     norms = (best_advs - inputs).flatten(1).norm(torch.inf, dim=1)
     _norms_clone = norms.clone()
 
-    rob_acc = (norms>8/255).float().mean()
-    acc = (norms>0).float().mean()
+    rob_acc = (norms>8/255).float().mean().item()
+    acc = (norms>0).float().mean().item()
 
     norms = (norms > pert_sizes).float().mean(dim=1)
 
@@ -194,7 +194,9 @@ for model in models:
 
     print(f"acc: {acc*100:.1f}")
     ax.plot(pert_sizes, norms, color='blue', label='HO-FMN', lw=2)
-    ax.set_title(f'$M_{{{idx}}}$: {conf_name}')
+    if 'SGD' in conf_name:
+        conf_name = conf_name.replace('SGD', 'GD')
+    ax.set_title(f'$M_{{{idx+1}}}$: {conf_name}')
     #ax.grid(True)
 
     ax.axvline(x=8/255, color='#EE004D', linewidth=1, linestyle='--')
@@ -224,7 +226,7 @@ for model in models:
             winner_confs[idx] = list()
         winner_confs[idx].append((conf_name, rob_acc.item()))
 
-    ax.scatter(8 / 255, apgd_best_point, label='apgd', marker='+', color='#EE004D', zorder=3, s=10**2)
+    ax.scatter(8 / 255, apgd_best_point, label='APGD', marker='+', color='#EE004D', zorder=3, s=10**2)
     # ax.text(8 / 255 + 0.01, apgd_best_point + 0.05, f'{apgd_best_point:.3f}', fontsize=16, verticalalignment='center',
     #         color='#EE004D')
 
@@ -246,7 +248,7 @@ for model in models:
 
     axins.plot(zoomed_x, zoomed_y, color='blue', lw=1.5)
     axins.plot(zoomed_x, zoomed_y_base, color='grey', linestyle='--')
-    axins.scatter(8 / 255, apgd_best_point, label='apgd', marker='+', color='#EE004D', zorder=3, s=10**2)
+    axins.scatter(8 / 255, apgd_best_point, label='APGD', marker='+', color='#EE004D', zorder=3, s=10**2)
 
     ax.indicate_inset_zoom(axins, edgecolor="black")
 

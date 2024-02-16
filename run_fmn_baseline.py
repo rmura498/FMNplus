@@ -111,11 +111,12 @@ else:
     model = torch.nn.DataParallel(model).to(device)
 
 subset_indices = list(range(128*32, 128*32 + batch_size*n_batches))
+dataset_frac = torch.utils.data.Subset(dataset, subset_indices)
 
 print(f"Samples: {len(subset_indices)}")
 
 dataloader = DataLoader(
-    dataset=dataset,
+    dataset=dataset_frac,
     batch_size=batch_size,
     shuffle=shuffle
 )
