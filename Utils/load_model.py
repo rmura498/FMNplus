@@ -31,6 +31,12 @@ def load_dataset(dataset_name='cifar10'):
                                                    train=False,
                                                    download=True,
                                                    transform=transform)
+    elif dataset_name == 'imagenet':
+        with FileLock(os.path.expanduser("~/.data.lock")):
+            dataset = torchvision.datasets.ImageNet('./Models/data',
+                                                   train=False,
+                                                   download=True,
+                                                   transform=transform)
 
     return dataset
 
