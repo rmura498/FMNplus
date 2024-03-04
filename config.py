@@ -38,6 +38,16 @@ MODEL_DATASET = {
     11: {'model_name': 'Rebuffi2021Fixing_R18_ddpm',
         'datasets': ['cifar10']
         }
+    12: {'model_name':'Liu2023Comprehensive_Swin-L',
+        'datasets': ['imagenet']
+        },
+    13: {'model_name':'Liu2023Comprehensive_ConvNeXt-L',
+        'datasets': ['imagenet']
+        },
+    14: {'model_name':'Singh2023Revisiting_ConvNeXt-L-ConvStem',
+        'datasets': ['imagenet']
+        }
+    
 }
 
 MODEL_NORMS = ["L0", "L1", "L2", "Linf"]
