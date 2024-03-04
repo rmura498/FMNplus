@@ -37,7 +37,7 @@ MODEL_DATASET = {
         },
     11: {'model_name': 'Rebuffi2021Fixing_R18_ddpm',
         'datasets': ['cifar10']
-        }
+        },
     12: {'model_name':'Liu2023Comprehensive_Swin-L',
         'datasets': ['imagenet']
         },
