@@ -6,7 +6,7 @@ import zipfile
 def download_dataset():
   print('Beginning dataset download with urllib2')
   url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-  path = "%s/tiny-imagenet-200.zip" % os.getcwd()
+  path = "%s/imagenet.zip" % os.getcwd()
   urllib.request.urlretrieve(url, path)
   print("Dataset downloaded")
 
