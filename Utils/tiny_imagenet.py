@@ -4,15 +4,15 @@ import zipfile
 
 
 def download_dataset():
-  print('Beginning dataset download with urllib2')
+  print('Beginning tiny imagenet download...')
   url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-  path = "%s/imagenet.zip" % os.getcwd()
+  path = "%s/tiny-imagenet-200.zip" % os.getcwd()
   urllib.request.urlretrieve(url, path)
-  print("Dataset downloaded")
+  print("Tiny imagenet downloaded")
 
 
 def unzip_data():
-  path_to_zip_file = "%s/imagenet.zip" % os.getcwd()
+  path_to_zip_file = "%s/tiny-imagenet-200.zip" % os.getcwd()
   directory_to_extract_to = "./Models/data"
   if not os.path.exists(directory_to_extract_to):
     os.makedirs(directory_to_extract_to)
@@ -23,7 +23,7 @@ def unzip_data():
 
 
 def format_val():
-  val_dir = ".Models/data/imagenet/val"
+  val_dir = ".Models/data/tiny-imagenet-200/val"
   print("Formatting: %s" % val_dir)
   val_annotations = "%s/val_annotations.txt" % val_dir
   val_dict = {}
