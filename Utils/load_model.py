@@ -40,7 +40,7 @@ def load_dataset(dataset_name='cifar10'):
         if not os.path.exists('./Models/data/tiny-imagenet-200'):
             download_dataset()
             unzip_data()
-        dataset = datasets.ImageFolder(os.path.join('./Models/data/tiny-imagenet-200', 'test'), transform=transform)
+        dataset = datasets.ImageFolder(os.path.join('./Models/data/tiny-imagenet-200', 'val'), transform=transform)
     else:
         raise NotImplementedError("Unknown dataset")
 
