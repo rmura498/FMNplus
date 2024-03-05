@@ -1,10 +1,8 @@
-import os
-
 import torchvision
 import torchvision.transforms as transforms
-
-from filelock import FileLock
 from robustbench.utils import load_model as rb_load_model
+
+from Utils.tiny_imagenet import TinyImageNetDataset
 
 from config import MODEL_NORMS, MODEL_DATASET
 
@@ -31,10 +29,16 @@ def load_dataset(dataset_name='cifar10'):
                                                    download=True,
                                                    transform=transform)
     elif dataset_name == 'imagenet':
+        '''
         dataset = torchvision.datasets.ImageNet('./Models/data',
                                                    train=False,
                                                    download=True,
                                                    transform=transform)
+        '''
+        dataset = TinyImageNetDataset(root_dir='./Models/data/tiny-imagenet-200',
+                                      mode='test', transform=transform)
+    else:
+        raise NotImplementedError("Unknown dataset")
 
     return dataset
 
