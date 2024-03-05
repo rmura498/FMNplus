@@ -12,7 +12,7 @@ def download_dataset():
 
 
 def unzip_data():
-  path_to_zip_file = "%s/tiny-imagenet-200.zip" % os.getcwd()
+  path_to_zip_file = "%s/imagenet.zip" % os.getcwd()
   directory_to_extract_to = "./Models/data"
   if not os.path.exists(directory_to_extract_to):
     os.makedirs(directory_to_extract_to)
@@ -23,7 +23,7 @@ def unzip_data():
 
 
 def format_val():
-  val_dir = "%s/tiny-imagenet-200/val" % os.getcwd()
+  val_dir = ".Models/data/imagenet/val"
   print("Formatting: %s" % val_dir)
   val_annotations = "%s/val_annotations.txt" % val_dir
   val_dict = {}
