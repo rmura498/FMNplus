@@ -2,7 +2,7 @@
 Source: https://gist.github.com/z-a-f/b862013c0dc2b540cf96a123a6766e54#file-tin-py-L143-L201
 """
 
-import imageio
+import imageio.v2 as imageio
 import numpy as np
 import os
 
@@ -192,6 +192,7 @@ class TinyImageNetDataset(Dataset):
     else:
       s = self.samples[idx]
       img = imageio.imread(s[0])
+      img = _add_channels(img)
       lbl = None if self.mode == 'test' else s[self.label_idx]
     sample = {'image': img, 'label': lbl}
 
