@@ -6,6 +6,9 @@ import imageio.v2 as imageio
 import numpy as np
 import os
 
+import urllib
+import zipfile
+
 from collections import defaultdict
 from torch.utils.data import Dataset
 
@@ -44,6 +47,57 @@ TinyImageNetPath
 ├── wnids.txt
 └── words.txt
 """
+
+
+def download_dataset():
+  print('Beginning dataset download with urllib2')
+  url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
+  path = "%s/tiny-imagenet-200.zip" % os.getcwd()
+  urllib.request.urlretrieve(url, path)
+  print("Dataset downloaded")
+
+def unzip_data():
+  path_to_zip_file = "%s/tiny-imagenet-200.zip" % os.getcwd()
+  directory_to_extract_to = os.getcwd()
+  print("Extracting zip file: %s" % path_to_zip_file)
+  with zipfile.ZipFile(path_to_zip_file, 'r') as zip_ref:
+    zip_ref.extractall(directory_to_extract_to)
+  print("Extracted at: %s" % directory_to_extract_to)
+
+def format_val():
+  val_dir = "%s/tiny-imagenet-200/val" % os.getcwd()
+  print("Formatting: %s" % val_dir)
+  val_annotations = "%s/val_annotations.txt" % val_dir
+  val_dict = {}
+  with open(val_annotations, 'r') as f:
+    for line in f:
+      line = line.strip().split()
+      assert(len(line) == 6)
+      wnind = line[1]
+      img_name = line[0]
+      boxes = '\t'.join(line[2:])
+      if wnind not in val_dict:
+          val_dict[wnind] = []
+      entries = val_dict[wnind]
+      entries.append((img_name, boxes))
+  assert(len(val_dict) == 200)
+  for wnind, entries in val_dict.items():
+    val_wnind_dir = "%s/%s" % (val_dir, wnind)
+    val_images_dir = "%s/images" % val_dir
+    val_wnind_images_dir = "%s/images" % val_wnind_dir
+    os.mkdir(val_wnind_dir)
+    os.mkdir(val_wnind_images_dir)
+    wnind_boxes = "%s/%s_boxes.txt" % (val_wnind_dir, wnind)
+    f = open(wnind_boxes, "w")
+    for img_name, box in entries:
+      source = "%s/%s" % (val_images_dir, img_name)
+      dst = "%s/%s" % (val_wnind_images_dir, img_name)
+      os.system("cp %s %s" % (source, dst))
+      f.write("%s\t%s\n" % (img_name, box))
+    f.close()
+  os.system("rm -rf %s" % val_images_dir)
+  print("Cleaning up: %s" % val_images_dir)
+  print("Formatting val done")
 
 def download_and_unzip(URL, root_dir):
   error_message = "Download is not yet implemented. Please, go to {URL} urself."
@@ -166,7 +220,7 @@ class TinyImageNetDataset(Dataset):
       load_desc = "Preloading {} data...".format(mode)
       self.img_data = np.zeros((self.samples_num,) + self.IMAGE_SHAPE,
                                dtype=np.float32)
-      self.label_data = np.zeros((self.samples_num,), dtype=np.int)
+      self.label_data = np.zeros((self.samples_num,), dtype=int)
       for idx in tqdm(range(self.samples_num), desc=load_desc):
         s = self.samples[idx]
         img = imageio.imread(s[0])
