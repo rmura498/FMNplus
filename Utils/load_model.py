@@ -32,8 +32,9 @@ def load_dataset(dataset_name='cifar10'):
                                                    download=True,
                                                    transform=transform)
     elif dataset_name == 'imagenet':
-        download_dataset()
-        unzip_data()
+        if not os.path.exists('./Models/data/tiny-imagenet-200'):
+            download_dataset()
+            unzip_data()
         dataset = datasets.ImageFolder(os.path.join('./Models/data/tiny-imagenet-200', 'test'), transform=transform)
     else:
         raise NotImplementedError("Unknown dataset")
