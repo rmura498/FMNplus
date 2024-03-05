@@ -26,14 +26,12 @@ def load_dataset(dataset_name='cifar10'):
                                              download=True,
                                              transform=transform)
     elif dataset_name == 'cifar10':
-        with FileLock(os.path.expanduser("~/.data.lock")):
-            dataset = torchvision.datasets.CIFAR10('./Models/data',
+        dataset = torchvision.datasets.CIFAR10('./Models/data',
                                                    train=False,
                                                    download=True,
                                                    transform=transform)
     elif dataset_name == 'imagenet':
-        with FileLock(os.path.expanduser("~/.data.lock")):
-            dataset = torchvision.datasets.ImageNet('./Models/data',
+        dataset = torchvision.datasets.ImageNet('./Models/data',
                                                    train=False,
                                                    download=True,
                                                    transform=transform)
