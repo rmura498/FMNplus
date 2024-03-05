@@ -46,7 +46,11 @@ MODEL_DATASET = {
         },
     14: {'model_name':'Singh2023Revisiting_ConvNeXt-L-ConvStem',
         'datasets': ['imagenet']
-        }
+        },
+    15: {
+        'model_name':'Salman2020Do_R18',
+        'datasets': ['imagenet']
+    }
     
 }
 
