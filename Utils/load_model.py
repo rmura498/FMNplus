@@ -17,9 +17,14 @@ def load_dataset(dataset_name='cifar10'):
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
     '''
-    transform = transforms.Compose([
-        transforms.ToTensor()
-    ])
+    if dataset_name == 'cifar10':
+        transform = transforms.Compose([
+            transforms.ToTensor()
+        ])
+    elif dataset_name == 'imagenet':
+        transform = transforms.Compose([transforms.ToTensor(),
+                                        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                                        ])
 
     if dataset_name == 'mnist':
         dataset = torchvision.datasets.MNIST('./Models/data',
