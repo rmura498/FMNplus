@@ -23,7 +23,7 @@ def unzip_data():
 
 
 def format_val():
-  val_dir = ".Models/data/tiny-imagenet-200/val"
+  val_dir = "./Models/data/tiny-imagenet-200/val"
   print("Formatting: %s" % val_dir)
   val_annotations = "%s/val_annotations.txt" % val_dir
   val_dict = {}
