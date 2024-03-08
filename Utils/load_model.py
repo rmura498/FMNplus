@@ -21,7 +21,7 @@ def load_dataset(dataset_name='cifar10'):
         transform = transforms.Compose([
             transforms.ToTensor()
         ])
-    elif dataset_name == 'imagenet':
+    elif dataset_name == 'imagenet' or dataset_name == 'imagenette':
         transform = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
@@ -45,6 +45,8 @@ def load_dataset(dataset_name='cifar10'):
             format_val()
 
         dataset = datasets.ImageFolder(os.path.join('./Models/data/tiny-imagenet-200', 'val'), transform=transform)
+    elif dataset_name == 'imagenette':
+        dataset = datasets.Imagenette('./Models/data', split='val', download=True, transform=transform)
     else:
         raise NotImplementedError("Unknown dataset")
 
