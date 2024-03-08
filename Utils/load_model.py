@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from robustbench.utils import load_model as rb_load_model
 
+import Utils.imagenet_1k
 from Utils.tiny_imagenet import download_dataset, unzip_data, format_val
 
 from config import MODEL_NORMS, MODEL_DATASET
@@ -39,14 +40,17 @@ def load_dataset(dataset_name='cifar10'):
                                                    download=True,
                                                    transform=transform)
     elif dataset_name == 'imagenet':
+        '''
         if not os.path.exists('./Models/data/tiny-imagenet-200'):
             download_dataset()
             unzip_data()
             format_val()
 
         dataset = datasets.ImageFolder(os.path.join('./Models/data/tiny-imagenet-200', 'val'), transform=transform)
-    elif dataset_name == 'imagenette':
-        dataset = datasets.Imagenette('./Models/data', split='val', download=True, transform=transform)
+        '''
+        dataset = Utils.imagenet_1k.ImageNet1K(annotations_file='./Models/data/imagenet1000/images.csv',
+                                               img_dir='./Models/data/imagenet1000',
+                                               transform=transform)
     else:
         raise NotImplementedError("Unknown dataset")
 
