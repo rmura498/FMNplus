@@ -24,20 +24,18 @@ class ImageNet1K(torch.utils.data.Dataset):
       Returns:
           img_paths (list of strs): the paths of images
           gt_labels (list of ints): the ground truth label of images
-          tgt_labels (list of ints): the target label of images
+
+      source: https://github.com/rmura498/Surrogate_ensemble/blob/main/Utils/load_models.py
       """
       dataset_root = Path(dataset_root)
       img_paths = list(sorted(dataset_root.glob('*.png')))
       gt_dict = defaultdict(int)
-      tgt_dict = defaultdict(int)
       with open(str(dataset_root) + '/' + "images.csv", newline='') as csvfile:
           reader = csv.DictReader(csvfile)
           for row in reader:
               gt_dict[row['ImageId']] = int(row['TrueLabel'])
-              tgt_dict[row['ImageId']] = int(row['TargetClass'])
       gt_labels = [gt_dict[key] - 1 for key in sorted(gt_dict)]  # zero indexed
-      tgt_labels = [tgt_dict[key] - 1 for key in sorted(tgt_dict)]  # zero indexed
-      return img_paths, gt_labels, tgt_labels
+      return img_paths, gt_labels
 
     def __len__(self):
         return len(self.img_labels)
