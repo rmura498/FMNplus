@@ -177,6 +177,8 @@ class FMN:
     def forward(self, images, labels, batch_size = None):
         images = images.clone().detach().to(self.device)
         labels = labels.clone().detach().to(self.device)
+        if len(labels.shape) > 1:
+            labels = labels.squeeze(1)
 
         adv_images = images.clone().detach()
 
