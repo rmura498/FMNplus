@@ -16,7 +16,7 @@ def load_dataset(dataset_name='cifar10'):
         transform = transforms.Compose([
             transforms.ToTensor()
         ])
-    elif dataset_name == 'imagenet' or dataset_name == 'imagenette':
+    elif dataset_name == 'imagenet':
         transform = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
