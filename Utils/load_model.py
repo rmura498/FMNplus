@@ -12,12 +12,6 @@ from config import MODEL_NORMS, MODEL_DATASET
 
 
 def load_dataset(dataset_name='cifar10'):
-    '''
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-    '''
     if dataset_name == 'cifar10':
         transform = transforms.Compose([
             transforms.ToTensor()
@@ -40,16 +34,7 @@ def load_dataset(dataset_name='cifar10'):
                                                    download=True,
                                                    transform=transform)
     elif dataset_name == 'imagenet':
-        '''
-        if not os.path.exists('./Models/data/tiny-imagenet-200'):
-            download_dataset()
-            unzip_data()
-            format_val()
-
-        dataset = datasets.ImageFolder(os.path.join('./Models/data/tiny-imagenet-200', 'val'), transform=transform)
-        '''
-        dataset = Utils.imagenet_1k.ImageNet1K(annotations_file='./Models/data/imagenet1000/images.csv',
-                                               img_dir='./Models/data/imagenet1000',
+        dataset = Utils.imagenet_1k.ImageNet1K(dataset_root='./Models/data/imagenet1000',
                                                transform=transform)
     else:
         raise NotImplementedError("Unknown dataset")
