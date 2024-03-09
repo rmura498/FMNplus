@@ -51,7 +51,7 @@ class ImageNet1K(torch.utils.data.Dataset):
         # image = read_image(str(img_path), mode=ImageReadMode.RGB)
         # image = Image.open(str(img_path)).convert('RGB')
         image = self.loader(str(img_path))
-        label = torch.Tensor(self.img_labels[idx])
+        label = torch.Tensor([self.img_labels[idx]])
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
