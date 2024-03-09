@@ -8,7 +8,7 @@ from PIL import Image
 
 class ImageNet1K(torch.utils.data.Dataset):
     def __init__(self, dataset_root=None, transform=None, target_transform=None):
-        if dataset_root == None:
+        if dataset_root is None:
           raise ValueError("Dataset root is None!")
         self.img_paths, self.img_labels = self._load_imagenet_1000(dataset_root)
         self.transform = transform
