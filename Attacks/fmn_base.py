@@ -357,7 +357,8 @@ class FMN:
         self.attack_data['best_distance'] = best_distance.median().cpu().item()
         self.attack_data['best_adv'] = init_trackers['best_adv'].clone().cpu()
 
-        best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(float('inf')))
+        # best_distance = torch.where(best_distance > 0, best_distance, torch.tensor(float('inf')))
+        best_distance = torch.where(best_distance > 0, best_distance, 1000)
 
         # LS: sr (ASR) is no longer returned, simply compute the accuracy of best_adv and then ASR = 1 - acc
         return init_trackers['best_adv'], best_distance
