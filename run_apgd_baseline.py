@@ -51,7 +51,7 @@ elif parallelize and device == 'cuda':
 
 current_date = datetime.now()
 formatted_date = current_date.strftime("%d%m%y%H")
-experiment_name = f'APGD_attack_mid{model_id}_{batch_size}_{steps}_{loss}'
+experiment_name = f'APGD_attack_mid{model_id}_{batch_size}_{steps}_ensembleCeDlr'
 
 # Creating a folder for the current tuning
 if not os.path.exists(experiment_name):
@@ -71,7 +71,7 @@ def attack_evaluate(images, labels, i):
 
     # running autoattack
     adversary = AutoAttack(model, norm='Linf', version='standard', device=device)
-    adversary.attacks_to_run = AA_attack_to_run
+    adversary.attacks_to_run = ['apgd-ce', 'apgd-dlr']
     adversary.apgd.n_restarts = 1
     adversary.apgd.n_iter = steps
 
@@ -84,7 +84,10 @@ def attack_evaluate(images, labels, i):
     asr = 1 - acc
     print(f"ASR check: {asr}")
 
+    attack_data['best_adv'] = best_adv.detach().cpu()
+    attack_data['images'] = images.detach().cpu()
     attack_data['asr'] = asr
+    attack_data['rb'] = rob.detach().cpu().item()
 
     print("\t\t[APGD] Saving the attack data...")
     attack_data_path = os.path.join(experiment_name, f"{formatted_date}_attackdata_{experiment_name}_batch{i}.pth")
